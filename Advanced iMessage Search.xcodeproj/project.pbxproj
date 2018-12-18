@@ -11,6 +11,10 @@
 		11ECCF2921BDDCBF002710AC /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11ECCF2821BDDCBF002710AC /* ViewController.swift */; };
 		11ECCF2B21BDDCC1002710AC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 11ECCF2A21BDDCC1002710AC /* Assets.xcassets */; };
 		11ECCF2E21BDDCC1002710AC /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 11ECCF2C21BDDCC1002710AC /* Main.storyboard */; };
+		11ECCF3821BE50A7002710AC /* SearchUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11ECCF3621BE50A7002710AC /* SearchUI.swift */; };
+		11F46E1121C5EA3100830FE0 /* SearchContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F46E1021C5EA3100830FE0 /* SearchContainer.swift */; };
+		11F46E1321C6C68800830FE0 /* SearchResults.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F46E1221C6C68800830FE0 /* SearchResults.swift */; };
+		11F46E1521C7C47800830FE0 /* MessageCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F46E1421C7C47800830FE0 /* MessageCell.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -21,6 +25,10 @@
 		11ECCF2D21BDDCC1002710AC /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		11ECCF2F21BDDCC1002710AC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		11ECCF3021BDDCC1002710AC /* Advanced_iMessage_Search.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Advanced_iMessage_Search.entitlements; sourceTree = "<group>"; };
+		11ECCF3621BE50A7002710AC /* SearchUI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchUI.swift; sourceTree = "<group>"; };
+		11F46E1021C5EA3100830FE0 /* SearchContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchContainer.swift; sourceTree = "<group>"; };
+		11F46E1221C6C68800830FE0 /* SearchResults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResults.swift; sourceTree = "<group>"; };
+		11F46E1421C7C47800830FE0 /* MessageCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageCell.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,12 +61,16 @@
 		11ECCF2521BDDCBF002710AC /* Advanced iMessage Search */ = {
 			isa = PBXGroup;
 			children = (
+				11F46E1021C5EA3100830FE0 /* SearchContainer.swift */,
 				11ECCF2621BDDCBF002710AC /* AppDelegate.swift */,
 				11ECCF2821BDDCBF002710AC /* ViewController.swift */,
 				11ECCF2A21BDDCC1002710AC /* Assets.xcassets */,
 				11ECCF2C21BDDCC1002710AC /* Main.storyboard */,
 				11ECCF2F21BDDCC1002710AC /* Info.plist */,
 				11ECCF3021BDDCC1002710AC /* Advanced_iMessage_Search.entitlements */,
+				11ECCF3621BE50A7002710AC /* SearchUI.swift */,
+				11F46E1221C6C68800830FE0 /* SearchResults.swift */,
+				11F46E1421C7C47800830FE0 /* MessageCell.swift */,
 			);
 			path = "Advanced iMessage Search";
 			sourceTree = "<group>";
@@ -134,7 +146,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				11ECCF2921BDDCBF002710AC /* ViewController.swift in Sources */,
+				11F46E1121C5EA3100830FE0 /* SearchContainer.swift in Sources */,
+				11F46E1321C6C68800830FE0 /* SearchResults.swift in Sources */,
+				11ECCF3821BE50A7002710AC /* SearchUI.swift in Sources */,
 				11ECCF2721BDDCBF002710AC /* AppDelegate.swift in Sources */,
+				11F46E1521C7C47800830FE0 /* MessageCell.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
