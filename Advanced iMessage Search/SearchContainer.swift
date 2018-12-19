@@ -37,3 +37,19 @@ class SearchContainer: NSViewController {
     }
     
 }
+
+struct MessageStruct {
+    var idx: Int64
+    var text: String
+    var is_from_me: Bool?
+    
+    init(idx: Int64, text: String, is_from_me: Int64) {
+        self.idx = idx
+        self.text = text
+        self.is_from_me = (is_from_me == 1)
+    }
+    init(idx: Int64, text: String) {
+        self.idx = idx
+        self.text = text
+    }
+}

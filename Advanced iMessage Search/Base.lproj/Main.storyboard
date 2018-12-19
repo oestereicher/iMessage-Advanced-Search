@@ -875,7 +875,7 @@
                                 </textFieldCell>
                             </textField>
                             <popUpButton verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="ETu-li-vLH">
-                                <rect key="frame" x="94" y="155" width="167" height="25"/>
+                                <rect key="frame" x="94" y="155" width="176" height="25"/>
                                 <autoresizingMask key="autoresizingMask"/>
                                 <popUpButtonCell key="cell" type="push" title="Item 1" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" selectedItem="gAk-h8-KvL" id="5Tq-TC-AGD">
                                     <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
@@ -889,14 +889,68 @@
                                     </menu>
                                 </popUpButtonCell>
                             </popUpButton>
+                            <datePicker verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Kus-4R-l6O">
+                                <rect key="frame" x="122" y="199" width="100" height="27"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <datePickerCell key="cell" borderStyle="bezel" alignment="left" id="jOP-Uf-jdJ">
+                                    <font key="font" metaFont="system"/>
+                                    <date key="date" timeIntervalSinceReferenceDate="-595929600">
+                                        <!--1982-02-12 16:00:00 +0000-->
+                                    </date>
+                                    <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
+                                    <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
+                                </datePickerCell>
+                            </datePicker>
+                            <datePicker verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="bj9-SX-uTU">
+                                <rect key="frame" x="291" y="199" width="100" height="27"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <datePickerCell key="cell" borderStyle="bezel" alignment="left" id="lsP-FJ-COM">
+                                    <font key="font" metaFont="system"/>
+                                    <date key="date" timeIntervalSinceReferenceDate="-595929600">
+                                        <!--1982-02-12 16:00:00 +0000-->
+                                    </date>
+                                    <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
+                                    <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
+                                </datePickerCell>
+                            </datePicker>
+                            <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="aob-Nx-Mq2">
+                                <rect key="frame" x="410" y="202" width="77" height="18"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <buttonCell key="cell" type="check" title="Any Date" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="Nds-GR-yaq">
+                                    <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                                    <font key="font" metaFont="system"/>
+                                </buttonCell>
+                            </button>
+                            <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="16n-mK-DWd">
+                                <rect key="frame" x="70" y="203" width="35" height="17"/>
+                                <autoresizingMask key="autoresizingMask"/>
+                                <textFieldCell key="cell" lineBreakMode="clipping" title="From" id="B77-ts-hcM">
+                                    <font key="font" metaFont="system"/>
+                                    <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
+                                    <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                                </textFieldCell>
+                            </textField>
+                            <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="2RB-qQ-Ypo">
+                                <rect key="frame" x="246" y="202" width="37" height="17"/>
+                                <autoresizingMask key="autoresizingMask"/>
+                                <textFieldCell key="cell" lineBreakMode="clipping" title="To" id="MQ2-et-WuT">
+                                    <font key="font" metaFont="system"/>
+                                    <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
+                                    <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                                </textFieldCell>
+                            </textField>
                         </subviews>
                     </view>
                     <connections>
+                        <outlet property="anyDate" destination="aob-Nx-Mq2" id="vjn-HC-QC2"/>
                         <outlet property="contactID" destination="mlU-aM-hJa" id="CYj-mc-hBg"/>
                         <outlet property="countries" destination="ETu-li-vLH" id="Ut6-dG-3Yn"/>
+                        <outlet property="fromDate" destination="Kus-4R-l6O" id="zfp-Lh-n6S"/>
+                        <outlet property="searchDate" destination="aob-Nx-Mq2" id="Stf-ZP-zCX"/>
                         <outlet property="searchMessage" destination="cmJ-jN-cB8" id="qR8-dC-zuo"/>
                         <outlet property="searchOpts" destination="OJl-Ro-hyi" id="LIs-go-LMz"/>
                         <outlet property="searchText" destination="40o-Ps-g1R" id="R19-5j-nWq"/>
+                        <outlet property="toDate" destination="bj9-SX-uTU" id="cXm-ef-6bh"/>
                     </connections>
                 </viewController>
                 <customObject id="O3M-2a-Vjp" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
@@ -995,7 +1049,7 @@
                                                         <color key="textColor" name="headerTextColor" catalog="System" colorSpace="catalog"/>
                                                         <color key="backgroundColor" name="headerColor" catalog="System" colorSpace="catalog"/>
                                                     </tableHeaderCell>
-                                                    <textFieldCell key="dataCell" lineBreakMode="truncatingTail" selectable="YES" editable="YES" borderStyle="bezel" title="Text Cell" bezelStyle="round" id="N58-my-UpS">
+                                                    <textFieldCell key="dataCell" selectable="YES" editable="YES" title="Text Cell" drawsBackground="YES" id="N58-my-UpS">
                                                         <font key="font" metaFont="system"/>
                                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                                                         <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -1007,9 +1061,9 @@
                                                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                             <subviews>
                                                                 <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="PQP-AM-TxM">
-                                                                    <rect key="frame" x="0.0" y="0.0" width="546" height="17"/>
+                                                                    <rect key="frame" x="0.0" y="-943" width="546" height="960"/>
                                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMinY="YES"/>
-                                                                    <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Table View Cell" id="rYs-g5-ObF">
+                                                                    <textFieldCell key="cell" sendsActionOnEndEditing="YES" title="Table View Cell" id="rYs-g5-ObF">
                                                                         <font key="font" metaFont="system"/>
                                                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                                                                         <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>

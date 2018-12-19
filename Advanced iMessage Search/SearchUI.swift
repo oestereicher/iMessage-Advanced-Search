@@ -15,14 +15,17 @@ class SearchUI: NSViewController {
     public var fullPath = ""
     private let opts = ["Contains", "Starts With", "Ends With", "Exactly"]
     //TODO: results and currentPerson should really be arrays of structs... figure out how to do this
-    public var results = [[String]]()
+    public var results = [MessageStruct]()
     public var resultsTab: SearchResults?
-    public var currentPerson = [[String]]()
+    public var currentPerson = [MessageStruct]()
     
     internal let SQLITE_STATIC = unsafeBitCast(0, to: sqlite3_destructor_type.self)
     internal let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
     
+    @IBOutlet weak var fromDate: NSDatePicker!
+    @IBOutlet weak var toDate: NSDatePicker!
+    @IBOutlet weak var anyDate: NSButton!
     @IBOutlet weak var countries: NSPopUpButton!
     @IBAction func idPressEnter(_ sender: Any) {
         sayButtonClicked(self)
@@ -55,8 +58,12 @@ class SearchUI: NSViewController {
         return (countries.titleOfSelectedItem! + num).replacingOccurrences( of:"[^0-9+]", with: "", options: .regularExpression)
     }
     private func searchDB(phone: String, search: String) -> Int {
+        //Search must include some restriction (date or text)
+        if search.isEmpty && anyDate.state == .on {
+            return -1
+        }
         //clear currentPerson
-        self.currentPerson = [[String]]()
+        self.currentPerson = [MessageStruct]()
         //open connection to database
         var db: OpaquePointer?
         if sqlite3_open(self.fullPath, &db) != SQLITE_OK {
@@ -113,11 +120,11 @@ class SearchUI: NSViewController {
             let date = sqlite3_column_int64(statement, 2)
             let is_from_me = sqlite3_column_int64(statement, 3)
             //let self_row = sqlite3_column_int64(statement, 4)
-            var singleMessage = [String]()
-            singleMessage.append(String(idx))
-            singleMessage.append(text)
-            singleMessage.append(String(is_from_me))
-            currentPerson.append(singleMessage)
+//            var singleMessage = [String]()
+//            singleMessage.append(String(idx))
+//            singleMessage.append(text)
+//            singleMessage.append(String(is_from_me))
+            currentPerson.append(MessageStruct(idx: Int64(idx), text: text, is_from_me: is_from_me))
             //print("guid: \(guid); text: \(text); date: \(date); is_from_me: \(is_from_me); self_row: \(self_row); idx: \(idx)")
             if sqlite3_prepare_v2(db, "insert into numbered_person values (?, ?, ?, ?, ?)", -1, &statement2, nil) != SQLITE_OK {
                 let errmsg = String(cString: sqlite3_errmsg(db)!)
@@ -168,8 +175,13 @@ class SearchUI: NSViewController {
             let errmsg = String(cString: sqlite3_errmsg(db)!)
             print("error dropping table: \(errmsg)")
         }
+        if sqlite3_exec(db, "create table found_text (self_row INTEGER, idx INTEGER, text TEXT)", nil, nil, nil) != SQLITE_OK {
+            let errmsg = String(cString: sqlite3_errmsg(db)!)
+            print("error creating found_text table: \(errmsg)")
+        }
         var sqlSearch = ""
-        //print("HEYO THIS IS THE SEARCHOPTS" + String(searchOpts.titleOfSelectedItem))
+        var numPersQuery = ""
+            //print("HEYO THIS IS THE SEARCHOPTS" + String(searchOpts.titleOfSelectedItem))
         switch(searchOpts.titleOfSelectedItem) {
         case self.opts[0]:
             sqlSearch = "%" + search + "%"
@@ -186,17 +198,34 @@ class SearchUI: NSViewController {
         default:
             break
         }
-        if sqlite3_exec(db, "create table found_text (self_row INTEGER, idx INTEGER, text TEXT)", nil, nil, nil) != SQLITE_OK {
-            let errmsg = String(cString: sqlite3_errmsg(db)!)
-            print("error creating found_text table: \(errmsg)")
+        if anyDate.state == .off/* && !search.isEmpty */{
+            let dateFormatter = DateFormatter()
+            dateFormatter.timeStyle = DateFormatter.Style.none
+            dateFormatter.dateFormat = "YYYY-MM-dd"
+            let fromDateStr = dateFormatter.string(from: fromDate.dateValue)
+            let toDateStr = dateFormatter.string(from: toDate.dateValue.addingTimeInterval(60 * 60 * 24))
+            let dateConversion = "datetime(date/1000000000 + 978307200, 'unixepoch', 'localtime')"
+            let nextDate = "datetime(date/1000000000 + 978307200, 'unixepoch', 'localtime')"
+            print("THE DATE IS \(nextDate)")
+            if !search.isEmpty {
+                numPersQuery = "select idx, text from numbered_person where text like ? and \(dateConversion) > \"\(fromDateStr)\" and \(nextDate) < \"\(toDateStr)\" order by date"
+            }
+            else {
+                numPersQuery = "select idx, text from numbered_person where \(dateConversion) > \"\(fromDateStr)\" and \(nextDate) < \"\(toDateStr)\" order by date limit 1"
+            }
         }
-        if sqlite3_prepare_v2(db, "select idx, text from numbered_person where text like ? order by date", -1, &statement, nil) != SQLITE_OK {
+        else {
+            numPersQuery = "select idx, text from numbered_person where text like ? order by date"
+        }
+        if sqlite3_prepare_v2(db, numPersQuery, -1, &statement, nil) != SQLITE_OK {
             let errmsg = String(cString: sqlite3_errmsg(db)!)
             print("error selecting from numbered_person: \(errmsg)")
         }
-        if sqlite3_bind_text(statement, 1, sqlSearch, -1, SQLITE_TRANSIENT) != SQLITE_OK {
-            let errmsg = String(cString: sqlite3_errmsg(db)!)
-            print("failure binding sqlSearch: \(errmsg)")
+        if !(anyDate.state == .off && search.isEmpty){
+            if sqlite3_bind_text(statement, 1, sqlSearch, -1, SQLITE_TRANSIENT) != SQLITE_OK {
+                let errmsg = String(cString: sqlite3_errmsg(db)!)
+                print("failure binding sqlSearch: \(errmsg)")
+            }
         }
         idx = 0
         while sqlite3_step(statement) == SQLITE_ROW {
@@ -254,9 +283,9 @@ class SearchUI: NSViewController {
 //            print("error finalizing prepared statement: \(errmsg)")
 //        }
 //        statement = nil
-        //TODO: do this while inserting into the table?? wait also idk if there's a good reason to insert anything into found_text... I think i could just add it to my 2D array
+        //TODO: do this while inserting into the table?? wait also idk if there's a good reason to insert anything into found_text... I think i could just add it to my MessageStruct array
         print("everything up to here worked")
-        self.results = [[String]]()
+        self.results = [MessageStruct]()
         if sqlite3_prepare_v2(db, "select * from found_text", -1, &statement, nil) != SQLITE_OK {
             let errmsg = String(cString: sqlite3_errmsg(db)!)
             print("error preparing select: \(errmsg)")
@@ -275,7 +304,7 @@ class SearchUI: NSViewController {
             var singleResult = [String]()
             singleResult.append(String(self_row))
             singleResult.append(text)
-            self.results.append(singleResult)
+            self.results.append(MessageStruct(idx: self_row, text: text))
 //            print("self_row: \(self.results[Int(idx)][0]); ", terminator: "")
 //            print("idx: \(idx); ", terminator: "")
 //            print("text: \(self.results[Int(idx)][1])")
@@ -311,9 +340,14 @@ class SearchUI: NSViewController {
                 if isPhoneNumber(num: id) {
                     id = formatPhoneNumber(num: id)
                 }
-                if !search.isEmpty {
+                if !search.isEmpty || anyDate.state == .off {
                     let numMatches = searchDB(phone: id, search: search)
-                    searchMessage.stringValue = "Search for \(searchOpts.title): \"\(search)\" in conversation with \(id) completed, returned \(numMatches) results"
+                    if numMatches == -1 {
+                        searchMessage.stringValue = "You must enter some search parameter"
+                    }
+                    else {
+                        searchMessage.stringValue = "Search for \(searchOpts.title): \"\(search)\" in conversation with \(id) completed, returned \(numMatches) results"
+                    }
                     resultsTab?.results = self.results
                     resultsTab?.currentPerson = self.currentPerson
                 }
