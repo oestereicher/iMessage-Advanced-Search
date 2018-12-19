@@ -18,6 +18,8 @@ class SearchUI: NSViewController {
     public var results = [MessageStruct]()
     public var resultsTab: SearchResults?
     public var currentPerson = [MessageStruct]()
+    private var fromDateStr = ""
+    private var toDateStr = ""
     
     internal let SQLITE_STATIC = unsafeBitCast(0, to: sqlite3_destructor_type.self)
     internal let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
@@ -120,10 +122,6 @@ class SearchUI: NSViewController {
             let date = sqlite3_column_int64(statement, 2)
             let is_from_me = sqlite3_column_int64(statement, 3)
             //let self_row = sqlite3_column_int64(statement, 4)
-//            var singleMessage = [String]()
-//            singleMessage.append(String(idx))
-//            singleMessage.append(text)
-//            singleMessage.append(String(is_from_me))
             currentPerson.append(MessageStruct(idx: Int64(idx), text: text, is_from_me: is_from_me))
             //print("guid: \(guid); text: \(text); date: \(date); is_from_me: \(is_from_me); self_row: \(self_row); idx: \(idx)")
             if sqlite3_prepare_v2(db, "insert into numbered_person values (?, ?, ?, ?, ?)", -1, &statement2, nil) != SQLITE_OK {
@@ -202,17 +200,19 @@ class SearchUI: NSViewController {
             let dateFormatter = DateFormatter()
             dateFormatter.timeStyle = DateFormatter.Style.none
             dateFormatter.dateFormat = "YYYY-MM-dd"
-            let fromDateStr = dateFormatter.string(from: fromDate.dateValue)
-            let toDateStr = dateFormatter.string(from: toDate.dateValue.addingTimeInterval(60 * 60 * 24))
+            fromDateStr = dateFormatter.string(from: fromDate.dateValue)
+            //add one day to the end date to make it inclusive
+            toDateStr = dateFormatter.string(from: toDate.dateValue.addingTimeInterval(60 * 60 * 24))
             let dateConversion = "datetime(date/1000000000 + 978307200, 'unixepoch', 'localtime')"
-            let nextDate = "datetime(date/1000000000 + 978307200, 'unixepoch', 'localtime')"
-            print("THE DATE IS \(nextDate)")
+            //print("THE DATE IS \(dateConversion)")
             if !search.isEmpty {
-                numPersQuery = "select idx, text from numbered_person where text like ? and \(dateConversion) > \"\(fromDateStr)\" and \(nextDate) < \"\(toDateStr)\" order by date"
+                numPersQuery = "select idx, text from numbered_person where text like ? and \(dateConversion) > \"\(fromDateStr)\" and \(dateConversion) < \"\(toDateStr)\" order by date"
             }
             else {
-                numPersQuery = "select idx, text from numbered_person where \(dateConversion) > \"\(fromDateStr)\" and \(nextDate) < \"\(toDateStr)\" order by date limit 1"
+                numPersQuery = "select idx, text from numbered_person where \(dateConversion) > \"\(fromDateStr)\" and \(dateConversion) < \"\(toDateStr)\" order by date limit 1"
             }
+            //reset to selected date for display message purposes
+            toDateStr = dateFormatter.string(from: toDate.dateValue)
         }
         else {
             numPersQuery = "select idx, text from numbered_person where text like ? order by date"
@@ -228,92 +228,18 @@ class SearchUI: NSViewController {
             }
         }
         idx = 0
+        self.results = [MessageStruct]()
         while sqlite3_step(statement) == SQLITE_ROW {
-            var statement2: OpaquePointer?
             let self_row = sqlite3_column_int64(statement, 0) //the idx of numbered_person
             var text = ""
             if let cText = sqlite3_column_text(statement, 1) {
                 text = String(cString: cText)
             }
-            if sqlite3_prepare_v2(db, "insert into found_text values (?, ?, ?)", -1, &statement2, nil) != SQLITE_OK {
-                let errmsg = String(cString: sqlite3_errmsg(db)!)
-                print("error inserting into numbered_person: \(errmsg)")
-            }
-            if sqlite3_bind_int64(statement2, 1, self_row) != SQLITE_OK {
-                let errmsg = String(cString: sqlite3_errmsg(db)!)
-                print("failure binding self_row: \(errmsg)")
-            }
-            if sqlite3_bind_int64(statement2, 2, Int64(idx)) != SQLITE_OK {
-                let errmsg = String(cString: sqlite3_errmsg(db)!)
-                print("failure binding idx: \(errmsg)")
-            }
-            if sqlite3_bind_text(statement2, 3, text, -1, SQLITE_TRANSIENT) != SQLITE_OK {
-                let errmsg = String(cString: sqlite3_errmsg(db)!)
-                print("failure binding text: \(errmsg)")
-            }
-            if sqlite3_step(statement2) != SQLITE_DONE {
-                let errmsg = String(cString: sqlite3_errmsg(db)!)
-                print("failure inserting into found_text: \(errmsg)")
-            }
-            if sqlite3_finalize(statement2) != SQLITE_OK {
-                let errmsg = String(cString: sqlite3_errmsg(db)!)
-                print("error finalizing prepared statement: \(errmsg)")
-            }
-            statement2 = nil
+            self.results.append(MessageStruct(idx: self_row, text: text))
             idx += 1
         }
-//        if sqlite3_prepare_v2(db, "create table found_text as select self_row, (select count(*) from numbered_person b where b.date < a.date and b.text like ?) as idx, text from numbered_person a where a.text like ? order by date", -1, &statement, nil) != SQLITE_OK {
-//            let errmsg = String(cString: sqlite3_errmsg(db)!)
-//            print("error preparing create table: \(errmsg)")
-//        }
-//        if sqlite3_bind_text(statement, 1, sqlSearch, -1, SQLITE_TRANSIENT) != SQLITE_OK {
-//            let errmsg = String(cString: sqlite3_errmsg(db)!)
-//            print("failure binding search text1: \(errmsg)")
-//        }
-//        if sqlite3_bind_text(statement, 2, sqlSearch, -1, SQLITE_TRANSIENT) != SQLITE_OK {
-//            let errmsg = String(cString: sqlite3_errmsg(db)!)
-//            print("failure binding search text2: \(errmsg)")
-//        }
-//        if sqlite3_step(statement) != SQLITE_DONE {
-//            let errmsg = String(cString: sqlite3_errmsg(db)!)
-//            print("failure creating found_text table: \(errmsg)")
-//        }
-//        if sqlite3_finalize(statement) != SQLITE_OK {
-//            let errmsg = String(cString: sqlite3_errmsg(db)!)
-//            print("error finalizing prepared statement: \(errmsg)")
-//        }
-//        statement = nil
         //TODO: do this while inserting into the table?? wait also idk if there's a good reason to insert anything into found_text... I think i could just add it to my MessageStruct array
         print("everything up to here worked")
-        self.results = [MessageStruct]()
-        if sqlite3_prepare_v2(db, "select * from found_text", -1, &statement, nil) != SQLITE_OK {
-            let errmsg = String(cString: sqlite3_errmsg(db)!)
-            print("error preparing select: \(errmsg)")
-        }
-        while sqlite3_step(statement) == SQLITE_ROW {
-            let self_row = sqlite3_column_int64(statement, 0)
-            let idx = sqlite3_column_int64(statement, 1)
-            var text = ""
-            if let cString = sqlite3_column_text(statement, 2) {
-                text = String(cString: cString)
-                //print("text: \(text)")
-            }
-            else {
-                print("no text cri")
-            }
-            var singleResult = [String]()
-            singleResult.append(String(self_row))
-            singleResult.append(text)
-            self.results.append(MessageStruct(idx: self_row, text: text))
-//            print("self_row: \(self.results[Int(idx)][0]); ", terminator: "")
-//            print("idx: \(idx); ", terminator: "")
-//            print("text: \(self.results[Int(idx)][1])")
-        }
-        if sqlite3_finalize(statement) != SQLITE_OK {
-            let errmsg = String(cString: sqlite3_errmsg(db)!)
-            print("error finalizing prepared statement: \(errmsg)")
-        }
-        statement = nil
         //close database connection
         if sqlite3_close(db) != SQLITE_OK {
             print("error closing database")
@@ -340,17 +266,24 @@ class SearchUI: NSViewController {
                 if isPhoneNumber(num: id) {
                     id = formatPhoneNumber(num: id)
                 }
-                if !search.isEmpty || anyDate.state == .off {
-                    let numMatches = searchDB(phone: id, search: search)
-                    if numMatches == -1 {
-                        searchMessage.stringValue = "You must enter some search parameter"
-                    }
-                    else {
-                        searchMessage.stringValue = "Search for \(searchOpts.title): \"\(search)\" in conversation with \(id) completed, returned \(numMatches) results"
-                    }
-                    resultsTab?.results = self.results
-                    resultsTab?.currentPerson = self.currentPerson
+                let numMatches = searchDB(phone: id, search: search)
+                if numMatches == -1 {
+                    searchMessage.stringValue = "You must enter some search parameter"
                 }
+                else {
+                    var dateMessage = ""
+                    if anyDate.state == .off {
+                        if fromDateStr == toDateStr {
+                            dateMessage = "on \(fromDateStr) "
+                        }
+                        else {
+                            dateMessage = "between \(fromDateStr) and \(toDateStr) "
+                        }
+                    }
+                    searchMessage.stringValue = "Search for \(searchOpts.title): \"\(search)\" in conversation with \(id) \(dateMessage)completed, returned \(numMatches) results"
+                }
+                resultsTab?.results = self.results
+                resultsTab?.currentPerson = self.currentPerson
             }
         }
         else {

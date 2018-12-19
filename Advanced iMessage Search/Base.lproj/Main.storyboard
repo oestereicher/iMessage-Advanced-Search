@@ -866,7 +866,7 @@
                                 </popUpButtonCell>
                             </popUpButton>
                             <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="cmJ-jN-cB8">
-                                <rect key="frame" x="82" y="20" width="344" height="43"/>
+                                <rect key="frame" x="82" y="20" width="344" height="67"/>
                                 <autoresizingMask key="autoresizingMask"/>
                                 <textFieldCell key="cell" id="vxq-0u-won">
                                     <font key="font" metaFont="system"/>
