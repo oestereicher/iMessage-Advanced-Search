@@ -145,6 +145,7 @@ extension SearchResults: NSTableViewDelegate {
         if let cell = tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier(cellIdentifier1), owner: nil) as? NSTableCellView {
             if row < results.count {
                 cell.textField?.stringValue = results[row].text
+                cell.toolTip = results[row].date
             }
             //cell.textField?.maximumNumberOfLines = 2
             return cell
@@ -156,6 +157,7 @@ extension SearchResults: NSTableViewDelegate {
                 cell.textField?.stringValue = cellText
                 print("CURRENT INDEX: \(currIdx)")
                 cellHeights[currIdx] = heightForCell(str: cellText)
+                cell.toolTip = currentPerson[currIdx].date
                 if !currentPerson[currIdx].is_from_me! {
                     cell.textField?.textColor = NSColor.red
 //                    cell.textField?.backgroundColor = NSColor.blue
@@ -177,7 +179,7 @@ extension SearchResults: NSTableViewDelegate {
     }
     func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
         if tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier(cellIdentifier2), owner: nil) != nil {
-            guard let tableCellView = tableViewCellForSizing else {
+            guard tableViewCellForSizing != nil else {
                 print("sad sad sda")
                 return 17
                 

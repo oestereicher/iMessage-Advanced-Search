@@ -1171,14 +1171,14 @@
             <objects>
                 <viewController title="iMessage Search" identifier="SearchContainer" storyboardIdentifier="SearchContainer" id="RIi-zD-LsV" customClass="SearchContainer" customModule="Advanced_iMessage_Search" customModuleProvider="target" sceneMemberID="viewController">
                     <view key="view" id="ViH-22-Uex">
-                        <rect key="frame" x="0.0" y="0.0" width="450" height="300"/>
+                        <rect key="frame" x="0.0" y="0.0" width="600" height="300"/>
                         <autoresizingMask key="autoresizingMask"/>
                         <subviews>
                             <containerView translatesAutoresizingMaskIntoConstraints="NO" id="Dag-8R-BJd">
-                                <rect key="frame" x="0.0" y="0.0" width="450" height="300"/>
+                                <rect key="frame" x="0.0" y="0.0" width="600" height="300"/>
                             </containerView>
                             <containerView translatesAutoresizingMaskIntoConstraints="NO" id="yZd-lA-5De">
-                                <rect key="frame" x="0.0" y="0.0" width="450" height="300"/>
+                                <rect key="frame" x="0.0" y="0.0" width="600" height="300"/>
                                 <connections>
                                     <segue destination="5zb-mv-6pU" kind="embed" id="mI8-ge-kd6"/>
                                 </connections>

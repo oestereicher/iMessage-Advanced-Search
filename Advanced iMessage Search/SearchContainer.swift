@@ -45,14 +45,17 @@ struct MessageStruct {
     var idx: Int64
     var text: String
     var is_from_me: Bool?
+    var date: String
     
-    init(idx: Int64, text: String, is_from_me: Int64) {
+    init(idx: Int64, text: String, is_from_me: Int64, date: String) {
         self.idx = idx
         self.text = text
         self.is_from_me = (is_from_me == 1)
+        self.date = date
     }
-    init(idx: Int64, text: String) {
+    init(idx: Int64, text: String, date: String) {
         self.idx = idx
         self.text = text
+        self.date = date
     }
 }

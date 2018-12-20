@@ -22,6 +22,7 @@ class SearchUI: NSViewController {
     private var toDateStr = ""
     public var contacts = [CNContact]()
     private var contactsDict = [String: CNContact]()
+    let dateFormatter = DateFormatter()
     
     internal let SQLITE_STATIC = unsafeBitCast(0, to: sqlite3_destructor_type.self)
     internal let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
@@ -67,6 +68,12 @@ class SearchUI: NSViewController {
         else {
             return (countries.titleOfSelectedItem! + num).replacingOccurrences( of:"[^0-9+]", with: "", options: .regularExpression)
         }
+    }
+    private func formatDate(date: Int64) -> String {
+        dateFormatter.amSymbol = "AM"
+        dateFormatter.pmSymbol = "PM"
+        dateFormatter.dateFormat = "MM/dd/yy, h:mm:ss a"
+        return dateFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(date/1000000000 + 978307200)))
     }
     private func searchDB(phone: String, search: String) -> Int {
         //Search must include some restriction (date or text)
@@ -177,9 +184,10 @@ class SearchUI: NSViewController {
                 text = String(cString: cText)
             }
             let date = sqlite3_column_int64(statement, 2)
+            let strDate = formatDate(date: date)
             let is_from_me = sqlite3_column_int64(statement, 3)
             //let self_row = sqlite3_column_int64(statement, 4)
-            currentPerson.append(MessageStruct(idx: Int64(idx), text: text, is_from_me: is_from_me))
+            currentPerson.append(MessageStruct(idx: Int64(idx), text: text, is_from_me: is_from_me, date: strDate))
             //print("guid: \(guid); text: \(text); date: \(date); is_from_me: \(is_from_me); self_row: \(self_row); idx: \(idx)")
             if sqlite3_prepare_v2(db, "insert into numbered_person values (?, ?, ?, ?, ?)", -1, &statement2, nil) != SQLITE_OK {
                 let errmsg = String(cString: sqlite3_errmsg(db)!)
@@ -254,7 +262,6 @@ class SearchUI: NSViewController {
             break
         }
         if anyDate.state == .off/* && !search.isEmpty */{
-            let dateFormatter = DateFormatter()
             dateFormatter.timeStyle = DateFormatter.Style.none
             dateFormatter.dateFormat = "YYYY-MM-dd"
             fromDateStr = dateFormatter.string(from: fromDate.dateValue)
@@ -263,10 +270,10 @@ class SearchUI: NSViewController {
             let dateConversion = "datetime(date/1000000000 + 978307200, 'unixepoch', 'localtime')"
             //print("THE DATE IS \(dateConversion)")
             if !search.isEmpty {
-                numPersQuery = "select idx, text from numbered_person where text like ? and \(dateConversion) > \"\(fromDateStr)\" and \(dateConversion) < \"\(toDateStr)\" order by date"
+                numPersQuery = "select idx, text, date from numbered_person where text like ? and \(dateConversion) > \"\(fromDateStr)\" and \(dateConversion) < \"\(toDateStr)\" order by date"
             }
             else {
-                numPersQuery = "select idx, text from numbered_person where \(dateConversion) > \"\(fromDateStr)\" and \(dateConversion) < \"\(toDateStr)\" order by date limit 1"
+                numPersQuery = "select idx, text, date from numbered_person where \(dateConversion) > \"\(fromDateStr)\" and \(dateConversion) < \"\(toDateStr)\" order by date limit 1"
             }
             //reset to selected date and reformat for display message purposes
             dateFormatter.dateFormat = "MM/dd/YYYY"
@@ -274,7 +281,7 @@ class SearchUI: NSViewController {
             toDateStr = dateFormatter.string(from: toDate.dateValue)
         }
         else {
-            numPersQuery = "select idx, text from numbered_person where text like ? order by date"
+            numPersQuery = "select idx, text, date from numbered_person where text like ? order by date"
         }
         if sqlite3_prepare_v2(db, numPersQuery, -1, &statement, nil) != SQLITE_OK {
             let errmsg = String(cString: sqlite3_errmsg(db)!)
@@ -294,7 +301,8 @@ class SearchUI: NSViewController {
             if let cText = sqlite3_column_text(statement, 1) {
                 text = String(cString: cText)
             }
-            self.results.append(MessageStruct(idx: self_row, text: text))
+            let date = formatDate(date: sqlite3_column_int64(statement, 2))
+            self.results.append(MessageStruct(idx: self_row, text: text, date: date))
             idx += 1
         }
         //TODO: do this while inserting into the table?? wait also idk if there's a good reason to insert anything into found_text... I think i could just add it to my MessageStruct array
