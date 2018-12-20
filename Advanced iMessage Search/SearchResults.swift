@@ -77,10 +77,11 @@ class SearchResults: NSViewController {
         selected = tableView.selectedRow
         if selected != -1 {
             offset = Int(results[selected].idx)
-            print(offset)
+            print("OFFSET: \(offset)")
+            messagesView.reloadData()
             let changedIndexes = IndexSet(integersIn: 0..<messagesView.numberOfRows)
             messagesView.noteHeightOfRows(withIndexesChanged: changedIndexes)
-            messagesView.reloadData()
+            print("oh boiiiiii")
         }
         else {
             selected = prevSelected

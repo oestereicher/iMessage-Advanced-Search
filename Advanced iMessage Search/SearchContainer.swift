@@ -7,12 +7,14 @@
 //
 
 import Cocoa
+import Contacts
 
 class SearchContainer: NSViewController {
     
     private var searchUI: SearchUI?
     private var searchResults: SearchResults?
     public var fullPath = ""
+    public var contacts = [CNContact]()
     
     override func prepare(for segue: NSStoryboardSegue, sender: Any?) {
         guard let tabViewController = segue.destinationController
@@ -21,6 +23,7 @@ class SearchContainer: NSViewController {
             if let controller = controller as? SearchUI {
                 searchUI = controller
                 searchUI?.fullPath = self.fullPath
+                searchUI?.contacts = self.contacts
             }
             if let controller = controller as? SearchResults {
                 searchResults = controller

@@ -28,5 +28,7 @@
 	<string>Main</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Without access to contacts you will only be able to search messages by phone number</string>
 </dict>
 </plist>

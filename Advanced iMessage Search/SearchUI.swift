@@ -20,11 +20,15 @@ class SearchUI: NSViewController {
     public var currentPerson = [MessageStruct]()
     private var fromDateStr = ""
     private var toDateStr = ""
+    public var contacts = [CNContact]()
+    private var contactsDict = [String: CNContact]()
     
     internal let SQLITE_STATIC = unsafeBitCast(0, to: sqlite3_destructor_type.self)
     internal let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
     
+    @IBOutlet weak var searchBy: NSPopUpButtonCell!
+    @IBOutlet weak var contactName: NSPopUpButton!
     @IBOutlet weak var fromDate: NSDatePicker!
     @IBOutlet weak var toDate: NSDatePicker!
     @IBOutlet weak var anyDate: NSButton!
@@ -39,25 +43,30 @@ class SearchUI: NSViewController {
     @IBOutlet weak var searchOpts: NSPopUpButton!
     @IBOutlet weak var contactID: NSTextField!
     @IBOutlet weak var searchText: NSTextField!
-    private func contactsGranted() {
-        print("heyo in the contacts granted function")
-        let contacts = try! store.unifiedContacts(matching: CNContact.predicateForContacts(matchingName: contactID.stringValue), keysToFetch:[CNContactGivenNameKey as CNKeyDescriptor, CNContactFamilyNameKey as CNKeyDescriptor])
-        // Checking if phone number is available for the given contact.
-        if (contacts[0].isKeyAvailable(CNContactPhoneNumbersKey)) {
-            print("\(contacts[0].phoneNumbers)")
-        } else {
-            //Refetch the keys
-            let keysToFetch = [CNContactGivenNameKey, CNContactFamilyNameKey, CNContactPhoneNumbersKey]
-            let refetchedContact = try! store.unifiedContact(withIdentifier: contacts[0].identifier, keysToFetch: keysToFetch as [CNKeyDescriptor])
-            print("\(refetchedContact.phoneNumbers)")
-        }
-    }
+//    private func contactsGranted() {
+//        print("heyo in the contacts granted function")
+//        let contacts = try! store.unifiedContacts(matching: CNContact.predicateForContacts(matchingName: contactID.stringValue), keysToFetch:[CNContactGivenNameKey as CNKeyDescriptor, CNContactFamilyNameKey as CNKeyDescriptor])
+//        // Checking if phone number is available for the given contact.
+//        if (contacts[0].isKeyAvailable(CNContactPhoneNumbersKey)) {
+//            print("\(contacts[0].phoneNumbers)")
+//        } else {
+//            //Refetch the keys
+//            let keysToFetch = [CNContactGivenNameKey, CNContactFamilyNameKey, CNContactPhoneNumbersKey]
+//            let refetchedContact = try! store.unifiedContact(withIdentifier: contacts[0].identifier, keysToFetch: keysToFetch as [CNKeyDescriptor])
+//            print("\(refetchedContact.phoneNumbers)")
+//        }
+//    }
     private func isPhoneNumber(num: String) -> Bool {
         return true
     }
-    private func formatPhoneNumber(num: String) -> String {
+    private func formatPhoneNumber(num: String, hasCountryCode: Bool) -> String {
         //return (countries.titleOfSelectedItem! + num).trimmingCharacters(in: CharacterSet(charactersIn: "0123456789+").inverted)
-        return (countries.titleOfSelectedItem! + num).replacingOccurrences( of:"[^0-9+]", with: "", options: .regularExpression)
+        if hasCountryCode {
+            return num.replacingOccurrences( of:"[^0-9+]", with: "", options: .regularExpression)
+        }
+        else {
+            return (countries.titleOfSelectedItem! + num).replacingOccurrences( of:"[^0-9+]", with: "", options: .regularExpression)
+        }
     }
     private func searchDB(phone: String, search: String) -> Int {
         //Search must include some restriction (date or text)
@@ -78,13 +87,61 @@ class SearchUI: NSViewController {
         }
         //create table with all the texts from the inputted phone number
         var statement: OpaquePointer?
-        if sqlite3_prepare_v2(db, "create table one_person as select chat.guid, message.text, message.date, message.is_from_me, message.ROWID as row from chat_message_join inner join chat on chat.ROWID = chat_message_join.chat_id inner join message on message.ROWID = chat_message_join.message_id and message.date = chat_message_join.message_date where chat.ROWID in ( select chat.ROWID from chat_handle_join inner join chat on chat.ROWID = chat_handle_join.chat_id inner join handle on handle.ROWID = chat_handle_join.handle_id where chat.chat_identifier = handle.id and handle.id= ?) order by message.date", -1, &statement, nil) != SQLITE_OK {
+        var onePersQuery = "create table one_person as select chat.guid, message.text, message.date, message.is_from_me, message.ROWID as row from chat_message_join inner join chat on chat.ROWID = chat_message_join.chat_id inner join message on message.ROWID = chat_message_join.message_id and message.date = chat_message_join.message_date where chat.ROWID in ( select chat.ROWID from chat_handle_join inner join chat on chat.ROWID = chat_handle_join.chat_id inner join handle on handle.ROWID = chat_handle_join.handle_id where chat.chat_identifier = handle.id and handle.id in (?"
+        if searchBy.titleOfSelectedItem == "Contact" { //search by contact
+            let contact = contactsDict[contactName.titleOfSelectedItem!]
+            var numPossibleChatIDs = 0
+            numPossibleChatIDs += (contact?.emailAddresses.count)!
+            numPossibleChatIDs += (contact?.phoneNumbers.count)!
+            if numPossibleChatIDs == 0 {
+                return 0
+            }
+            else {
+                for _ in 0..<numPossibleChatIDs {
+                    onePersQuery += ",?"
+                }
+            }
+        }
+        onePersQuery += ")) order by message.date"
+        if sqlite3_prepare_v2(db, onePersQuery, -1, &statement, nil) != SQLITE_OK {
             let errmsg = String(cString: sqlite3_errmsg(db)!)
             print("error preparing create table: \(errmsg)")
         }
-        if sqlite3_bind_text(statement, 1, phone, -1, SQLITE_TRANSIENT) != SQLITE_OK {
-            let errmsg = String(cString: sqlite3_errmsg(db)!)
-            print("failure binding phone number: \(errmsg)")
+        if searchBy.titleOfSelectedItem == "Contact" { //search by contact
+            print("hi how are ya")
+            var paramNum = 1
+            let contact = contactsDict[contactName.titleOfSelectedItem!]
+            for phoneNum in (contact?.phoneNumbers)! {
+                print(formatPhoneNumber(num: phoneNum.value.stringValue, hasCountryCode: true))
+                let phoneStr = phoneNum.value.stringValue
+                var formattedNum = ""
+                //TODO: change this to check for > 9 number characters rather than a leading +
+                if phoneStr[phoneStr.startIndex] == "+" {
+                    formattedNum = formatPhoneNumber(num: phoneStr, hasCountryCode: true)
+                }
+                else {
+                    formattedNum = formatPhoneNumber(num: phoneStr, hasCountryCode: false)
+                }
+                if sqlite3_bind_text(statement, Int32(paramNum), formattedNum, -1, SQLITE_TRANSIENT) != SQLITE_OK {
+                    let errmsg = String(cString: sqlite3_errmsg(db)!)
+                    print("failure binding phone number: \(errmsg)")
+                }
+                paramNum += 1
+            }
+            for email in (contact?.emailAddresses)! {
+                print(email.value as String)
+                if sqlite3_bind_text(statement, Int32(paramNum), email.value as String, -1, SQLITE_TRANSIENT) != SQLITE_OK {
+                    let errmsg = String(cString: sqlite3_errmsg(db)!)
+                    print("failure binding email: \(errmsg)")
+                }
+                paramNum += 1
+            }
+        }
+        else { //search by phone number
+            if sqlite3_bind_text(statement, 1, phone, -1, SQLITE_TRANSIENT) != SQLITE_OK {
+                let errmsg = String(cString: sqlite3_errmsg(db)!)
+                print("failure binding phone number: \(errmsg)")
+            }
         }
         if sqlite3_step(statement) != SQLITE_DONE {
             let errmsg = String(cString: sqlite3_errmsg(db)!)
@@ -211,7 +268,9 @@ class SearchUI: NSViewController {
             else {
                 numPersQuery = "select idx, text from numbered_person where \(dateConversion) > \"\(fromDateStr)\" and \(dateConversion) < \"\(toDateStr)\" order by date limit 1"
             }
-            //reset to selected date for display message purposes
+            //reset to selected date and reformat for display message purposes
+            dateFormatter.dateFormat = "MM/dd/YYYY"
+            fromDateStr = dateFormatter.string(from: fromDate.dateValue)
             toDateStr = dateFormatter.string(from: toDate.dateValue)
         }
         else {
@@ -247,7 +306,7 @@ class SearchUI: NSViewController {
         db = nil
         return idx
     }
-    var store: CNContactStore!
+    //var store: CNContactStore!
     @IBAction func sayButtonClicked(_ sender: Any) {
         //ahaaaa try to get contacts working idk why its not requesting access
 //        store = CNContactStore()
@@ -262,9 +321,9 @@ class SearchUI: NSViewController {
         let search = searchText.stringValue
         if !self.fullPath.isEmpty {
             print(self.fullPath)
-            if !id.isEmpty {
+            if !id.isEmpty || searchBy.titleOfSelectedItem == "Contact" {
                 if isPhoneNumber(num: id) {
-                    id = formatPhoneNumber(num: id)
+                    id = formatPhoneNumber(num: id, hasCountryCode: false)
                 }
                 let numMatches = searchDB(phone: id, search: search)
                 if numMatches == -1 {
@@ -280,7 +339,14 @@ class SearchUI: NSViewController {
                             dateMessage = "between \(fromDateStr) and \(toDateStr) "
                         }
                     }
-                    searchMessage.stringValue = "Search for \(searchOpts.title): \"\(search)\" in conversation with \(id) \(dateMessage)completed, returned \(numMatches) results"
+                    if searchBy.titleOfSelectedItem == "Contact" {
+                        id = contactName.titleOfSelectedItem!
+                    }
+                    var searchDescription = "messages"
+                    if !search.isEmpty {
+                        searchDescription = "\(searchOpts.title): \"\(search)\""
+                    }
+                    searchMessage.stringValue = "Search for \(searchDescription) in conversation with \(id) \(dateMessage)completed, returned \(numMatches) results"
                 }
                 resultsTab?.results = self.results
                 resultsTab?.currentPerson = self.currentPerson
@@ -299,6 +365,17 @@ class SearchUI: NSViewController {
         }
         countries.removeAllItems()
         countries.addItems(withTitles: countryToCode)
+        contactName.removeAllItems()
+        for contact in self.contacts {
+//            for email in contact.emailAddresses{
+//                print(email.value)
+//            }
+            if !(contact.givenName.isEmpty && contact.familyName.isEmpty) {
+                let fullName = contact.givenName + " " + contact.familyName
+                contactName.addItem(withTitle: fullName)
+                contactsDict[fullName] = contact
+            }
+        }
     }
     
     var countryToCode = [

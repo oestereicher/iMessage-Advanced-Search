@@ -18,6 +18,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		11E2EE9221CAD39F00E5BD33 /* Advanced iMessage Search.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Advanced iMessage Search.entitlements"; sourceTree = "<group>"; };
 		11ECCF2321BDDCBF002710AC /* Advanced iMessage Search.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Advanced iMessage Search.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		11ECCF2621BDDCBF002710AC /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		11ECCF2821BDDCBF002710AC /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -61,6 +62,7 @@
 		11ECCF2521BDDCBF002710AC /* Advanced iMessage Search */ = {
 			isa = PBXGroup;
 			children = (
+				11E2EE9221CAD39F00E5BD33 /* Advanced iMessage Search.entitlements */,
 				11F46E1021C5EA3100830FE0 /* SearchContainer.swift */,
 				11ECCF2621BDDCBF002710AC /* AppDelegate.swift */,
 				11ECCF2821BDDCBF002710AC /* ViewController.swift */,
@@ -107,6 +109,14 @@
 				TargetAttributes = {
 					11ECCF2221BDDCBF002710AC = {
 						CreatedOnToolsVersion = 10.1;
+						SystemCapabilities = {
+							com.apple.HardenedRuntime = {
+								enabled = 0;
+							};
+							com.apple.Sandbox = {
+								enabled = 0;
+							};
+						};
 					};
 				};
 			};
@@ -287,9 +297,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = "Advanced iMessage Search/Advanced_iMessage_Search.entitlements";
+				CODE_SIGN_IDENTITY = "Mac Developer";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = LTW8N7Y82N;
 				INFOPLIST_FILE = "Advanced iMessage Search/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -305,9 +316,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = "Advanced iMessage Search/Advanced_iMessage_Search.entitlements";
+				CODE_SIGN_IDENTITY = "Mac Developer";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = LTW8N7Y82N;
 				INFOPLIST_FILE = "Advanced iMessage Search/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
