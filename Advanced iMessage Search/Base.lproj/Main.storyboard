@@ -1068,6 +1068,30 @@
                                                                 <outlet property="textField" destination="dGP-7R-yTY" id="dhP-y3-fxM"/>
                                                             </connections>
                                                         </tableCellView>
+                                                        <tableCellView identifier="MatchInAllID" id="j9h-df-LS5">
+                                                            <rect key="frame" x="1" y="49" width="235" height="43"/>
+                                                            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                                                            <subviews>
+                                                                <imageView horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="sWn-Ne-9WC">
+                                                                    <rect key="frame" x="3" y="3" width="40" height="40"/>
+                                                                    <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                                    <imageCell key="cell" refusesFirstResponder="YES" alignment="left" imageScaling="proportionallyDown" image="NSActionTemplate" id="zk0-yk-Fdf"/>
+                                                                </imageView>
+                                                                <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" fixedFrame="YES" allowsExpansionToolTips="YES" translatesAutoresizingMaskIntoConstraints="NO" id="EzD-9x-Kvd">
+                                                                    <rect key="frame" x="37" y="3" width="197" height="40"/>
+                                                                    <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMinY="YES"/>
+                                                                    <textFieldCell key="cell" sendsActionOnEndEditing="YES" title="Table View Cell" id="Vtp-z8-03y">
+                                                                        <font key="font" metaFont="system"/>
+                                                                        <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
+                                                                        <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
+                                                                    </textFieldCell>
+                                                                </textField>
+                                                            </subviews>
+                                                            <connections>
+                                                                <outlet property="imageView" destination="sWn-Ne-9WC" id="6Z4-TH-sQv"/>
+                                                                <outlet property="textField" destination="EzD-9x-Kvd" id="0ay-BB-R8L"/>
+                                                            </connections>
+                                                        </tableCellView>
                                                     </prototypeCellViews>
                                                 </tableColumn>
                                             </tableColumns>
@@ -1219,4 +1243,7 @@
             <point key="canvasLocation" x="571" y="692"/>
         </scene>
     </scenes>
+    <resources>
+        <image name="NSActionTemplate" width="14" height="14"/>
+    </resources>
 </document>

@@ -21,7 +21,7 @@ class SearchUI: NSViewController {
     private var fromDateStr = ""
     private var toDateStr = ""
     public var contacts = [CNContact]()
-    private var contactsDict = [String: CNContact]()
+    public var contactsDict = [String: CNContact]()
     let dateFormatter = DateFormatter()
     public var handleIDs = [String]()
     public var handleIDDict = [String: Int]()
@@ -72,6 +72,18 @@ class SearchUI: NSViewController {
         else {
             return (countries.titleOfSelectedItem! + num).replacingOccurrences( of:"[^0-9+]", with: "", options: .regularExpression)
         }
+    }
+    private func formatAnyPhoneNumber(phoneNum: CNLabeledValue<CNPhoneNumber>) -> String {
+        let phoneStr = phoneNum.value.stringValue
+        var formattedNum = ""
+        //assumes that there is a country code in the number if there are more than 10 digits
+        if phoneStr.replacingOccurrences( of:"[^0-9]", with: "", options: .regularExpression).count > 10 {
+            formattedNum = formatPhoneNumber(num: phoneStr, hasCountryCode: true)
+        }
+        else {
+            formattedNum = formatPhoneNumber(num: phoneStr, hasCountryCode: false)
+        }
+        return formattedNum
     }
     private func formatDate(date: Int64) -> String {
         dateFormatter.amSymbol = "AM"
@@ -151,15 +163,7 @@ class SearchUI: NSViewController {
                 let contact = contactsDict[contactName.titleOfSelectedItem!]
                 for phoneNum in (contact?.phoneNumbers)! {
                     print(formatPhoneNumber(num: phoneNum.value.stringValue, hasCountryCode: true))
-                    let phoneStr = phoneNum.value.stringValue
-                    var formattedNum = ""
-                    //assumes that there is a country code in the number if there are more than 10 digits
-                    if phoneStr.replacingOccurrences( of:"[^0-9]", with: "", options: .regularExpression).count > 10 {
-                        formattedNum = formatPhoneNumber(num: phoneStr, hasCountryCode: true)
-                    }
-                    else {
-                        formattedNum = formatPhoneNumber(num: phoneStr, hasCountryCode: false)
-                    }
+                    let formattedNum = formatAnyPhoneNumber(phoneNum: phoneNum)
                     idForSearch += (formattedNum + ",")
                     if sqlite3_bind_text(statement, Int32(paramNum), formattedNum, -1, SQLITE_TRANSIENT) != SQLITE_OK {
                         let errmsg = String(cString: sqlite3_errmsg(db)!)
@@ -397,7 +401,20 @@ class SearchUI: NSViewController {
                 contactName.addItem(withTitle: fullName)
                 contactsDict[fullName] = contact
             }
+            for email in contact.emailAddresses {
+                let emailStr = email.value as String
+                if contactsDict[emailStr] == nil {
+                    contactsDict[email.value as String] = contact
+                }
+            }
+            for phoneNum in contact.phoneNumbers {
+                let phoneStr = formatAnyPhoneNumber(phoneNum: phoneNum)
+                if contactsDict[phoneStr] == nil {
+                    contactsDict[phoneStr] = contact
+                }
+            }
         }
+        resultsTab?.contactsDict = self.contactsDict
     }
     
     var countryToCode = [

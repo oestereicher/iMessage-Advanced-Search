@@ -7,6 +7,7 @@
 //
 
 import Cocoa
+import Contacts
 
 class SearchResults: NSViewController {
 
@@ -26,6 +27,7 @@ class SearchResults: NSViewController {
     private var cellHeightsAll = [[Int]]()
     public var handleIDs = [String]()
     public var handleIDDict = [String: Int]()
+    public var contactsDict = [String: CNContact]()
     func loadMore(amt: Int) {
         if selected >= 0 && selected < results.count {
             messagesToShow[selected] += amt
@@ -139,46 +141,71 @@ extension SearchResults: NSTableViewDataSource {
     }
 }
 extension SearchResults: NSTableViewDelegate {
-    func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
-        let cellIdentifier1: String = "MatchID"
-        let cellIdentifier2: String = "MessageID"
-        if let cell = tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier(cellIdentifier1), owner: nil) as? NSTableCellView {
-            if row < results.count {
-                cell.textField?.stringValue = results[row].message.text
-                cell.toolTip = results[row].message.date
+    func makeMessageView(cell: NSTableCellView, row: Int) -> NSTableCellView {
+        let currIdx = row + offset
+        if currIdx < currentPerson.messages.count {
+            let cellText = currentPerson.messages[currIdx].text
+            cell.textField?.stringValue = cellText
+            //                print("CURRENT INDEX: \(currIdx)")
+            if cellHeightsAll.count > 1 && (!searchByContact || searchAllHandles) {
+                cellHeightsAll[handleIDDict[currentPerson.id]!][currIdx] = heightForCell(str: cellText)
             }
-            return cell
+            else {
+                cellHeights[currIdx] = heightForCell(str: cellText)
+            }
+            cell.toolTip = currentPerson.messages[currIdx].date
+            if !currentPerson.messages[currIdx].is_from_me! {
+                cell.textField?.textColor = NSColor.red
+                //                    cell.textField?.backgroundColor = NSColor.blue
+                //                    cell.textField?.isBezeled = false
+                //                    cell.textField?.isEditable = false
+                //                    cell.textField?.drawsBackground = false
+            }
+            else {
+                cell.textField?.textColor = NSColor.controlTextColor
+            }
         }
-        else if let cell = tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier(cellIdentifier2), owner: nil) as? NSTableCellView {
-            let currIdx = row + offset
-            if currIdx < currentPerson.messages.count {
-                let cellText = currentPerson.messages[currIdx].text
-                cell.textField?.stringValue = cellText
-//                print("CURRENT INDEX: \(currIdx)")
-                if cellHeightsAll.count > 1 && (!searchByContact || searchAllHandles) {
-                    cellHeightsAll[handleIDDict[currentPerson.id]!][currIdx] = heightForCell(str: cellText)
+        tableViewCellForSizing = cell
+        return cell
+    }
+    func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+        let cellIDMatch: String = "MatchID"
+        let cellIDMatchAll: String = "MatchInAllID"
+        let cellIDMessage: String = "MessageID"
+        if searchAllHandles {
+            if let cell = tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier(cellIDMatchAll), owner: nil) as? NSTableCellView {
+                if row < results.count {
+                    cell.textField?.stringValue = results[row].message.text
+                    cell.toolTip = results[row].message.date
+                    let contact = contactsDict[results[row].id]
+                    if contact != nil && (contact?.imageDataAvailable)! {
+                        cell.imageView?.image = NSImage(data: (contact?.imageData!)!)
+                    }
                 }
-                else {
-                    cellHeights[currIdx] = heightForCell(str: cellText)
-                }
-                cell.toolTip = currentPerson.messages[currIdx].date
-                if !currentPerson.messages[currIdx].is_from_me! {
-                    cell.textField?.textColor = NSColor.red
-//                    cell.textField?.backgroundColor = NSColor.blue
-//                    cell.textField?.isBezeled = false
-//                    cell.textField?.isEditable = false
-//                    cell.textField?.drawsBackground = false
-                }
-                else {
-                    cell.textField?.textColor = NSColor.controlTextColor
-                }
+                return cell
             }
-            tableViewCellForSizing = cell
-            return cell
+            else if let cell = tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier(cellIDMessage), owner: nil) as? NSTableCellView {
+                return makeMessageView(cell: cell, row: row)
+            }
+        }
+        else {
+            if let cell = tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier(cellIDMatch), owner: nil) as? NSTableCellView {
+                if row < results.count {
+                    cell.textField?.stringValue = results[row].message.text
+                    cell.toolTip = results[row].message.date
+                }
+                return cell
+            }
+            else if let cell = tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier(cellIDMessage), owner: nil) as? NSTableCellView {
+                return makeMessageView(cell: cell, row: row)
+            }
         }
         return nil
     }
     func tableViewSelectionDidChange(_ notification: Notification) {
+        if (tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier("MessageID"), owner: nil) != nil) {
+            return
+        }
         updateStatus()
     }
     func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
