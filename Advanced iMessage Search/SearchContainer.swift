@@ -41,7 +41,7 @@ class SearchContainer: NSViewController {
     
 }
 
-struct MessageStruct {
+struct Message {
     var idx: Int64
     var text: String
     var is_from_me: Bool?
@@ -58,4 +58,23 @@ struct MessageStruct {
         self.text = text
         self.date = date
     }
+}
+
+struct Messages {
+    var messages: [Message]
+    var id: String
+    
+    init() {
+        self.messages = [Message]()
+        self.id = ""
+    }
+    init(messages: [Message], id: String) {
+        self.messages = messages
+        self.id = id
+    }
+}
+
+struct MessageIDPair {
+    var message: Message
+    var id: String
 }

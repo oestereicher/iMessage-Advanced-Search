@@ -44,7 +44,8 @@ class ViewController: NSViewController {
                 CNContactEmailAddressesKey,
                 CNContactPhoneNumbersKey,
                 CNContactImageDataAvailableKey,
-                CNContactThumbnailImageDataKey] as [Any]
+                CNContactThumbnailImageDataKey,
+                CNContactImageDataKey] as [Any]
             
             // Get all the containers
             var allContainers: [CNContainer] = []

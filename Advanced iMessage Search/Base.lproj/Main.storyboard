@@ -977,6 +977,23 @@
                                     <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                 </textFieldCell>
                             </textField>
+                            <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="oks-ia-Sol">
+                                <rect key="frame" x="82" y="239" width="146" height="18"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <buttonCell key="cell" type="check" title="Search all messages" bezelStyle="regularSquare" imagePosition="left" inset="2" id="bpq-6Y-HJS">
+                                    <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                                    <font key="font" metaFont="system"/>
+                                </buttonCell>
+                            </button>
+                            <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Wry-Yh-PgE">
+                                <rect key="frame" x="235" y="241" width="187" height="17"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <textFieldCell key="cell" lineBreakMode="clipping" title="Warning: may take a long time" id="FOL-xj-HkZ">
+                                    <font key="font" metaFont="system"/>
+                                    <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
+                                    <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                                </textFieldCell>
+                            </textField>
                         </subviews>
                     </view>
                     <connections>
@@ -985,6 +1002,7 @@
                         <outlet property="contactName" destination="bKS-ka-235" id="nUw-IW-Yig"/>
                         <outlet property="countries" destination="ETu-li-vLH" id="Ut6-dG-3Yn"/>
                         <outlet property="fromDate" destination="Kus-4R-l6O" id="zfp-Lh-n6S"/>
+                        <outlet property="searchAll" destination="oks-ia-Sol" id="oAC-SM-79v"/>
                         <outlet property="searchBy" destination="thM-j1-I5a" id="lwc-F9-9gs"/>
                         <outlet property="searchDate" destination="aob-Nx-Mq2" id="Stf-ZP-zCX"/>
                         <outlet property="searchMessage" destination="cmJ-jN-cB8" id="qR8-dC-zuo"/>
@@ -1048,6 +1066,30 @@
                                                             </subviews>
                                                             <connections>
                                                                 <outlet property="textField" destination="dGP-7R-yTY" id="dhP-y3-fxM"/>
+                                                            </connections>
+                                                        </tableCellView>
+                                                        <tableCellView identifier="MatchInAllID" id="j9h-df-LS5">
+                                                            <rect key="frame" x="1" y="49" width="235" height="43"/>
+                                                            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                                                            <subviews>
+                                                                <imageView horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="sWn-Ne-9WC">
+                                                                    <rect key="frame" x="3" y="3" width="40" height="40"/>
+                                                                    <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                                    <imageCell key="cell" refusesFirstResponder="YES" alignment="left" imageScaling="proportionallyDown" image="NSActionTemplate" id="zk0-yk-Fdf"/>
+                                                                </imageView>
+                                                                <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" fixedFrame="YES" allowsExpansionToolTips="YES" translatesAutoresizingMaskIntoConstraints="NO" id="EzD-9x-Kvd">
+                                                                    <rect key="frame" x="37" y="3" width="197" height="40"/>
+                                                                    <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMinY="YES"/>
+                                                                    <textFieldCell key="cell" sendsActionOnEndEditing="YES" title="Table View Cell" id="Vtp-z8-03y">
+                                                                        <font key="font" metaFont="system"/>
+                                                                        <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
+                                                                        <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
+                                                                    </textFieldCell>
+                                                                </textField>
+                                                            </subviews>
+                                                            <connections>
+                                                                <outlet property="imageView" destination="sWn-Ne-9WC" id="6Z4-TH-sQv"/>
+                                                                <outlet property="textField" destination="EzD-9x-Kvd" id="0ay-BB-R8L"/>
                                                             </connections>
                                                         </tableCellView>
                                                     </prototypeCellViews>
@@ -1201,4 +1243,7 @@
             <point key="canvasLocation" x="571" y="692"/>
         </scene>
     </scenes>
+    <resources>
+        <image name="NSActionTemplate" width="14" height="14"/>
+    </resources>
 </document>
