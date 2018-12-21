@@ -18,7 +18,8 @@ class SearchResults: NSViewController {
     public var people = [Messages]()
     public var searchAllHandles = false
     public var searchByContact = false
-    private var offset: Int = 0
+    //TODO: array of offsets to keep track for each result
+    private var offset = [Int]()
     private var messagesToShow = [Int]()
     private var selected: Int = -1
     var tableViewCellForSizing: NSTableCellView?
@@ -34,23 +35,23 @@ class SearchResults: NSViewController {
         }
     }
     @IBAction func loadMessagesUp(_ sender: Any) {
-        if offset > 10 {
+        if offset[selected] > 10 {
             loadMore(amt: 10)
-            offset -= 10
+            offset[selected] -= 10
         }
         else {
-            loadMore(amt: offset)
-            offset = 0
+            loadMore(amt: offset[selected])
+            offset[selected] = 0
         }
         messagesView.reloadData()
     }
     @IBAction func loadMessagesDown(_ sender: Any) {
         if selected >= 0 && selected < results.count {
-            if offset + messagesToShow[selected] + 10 < currentPerson.messages.count {
+            if offset[selected] + messagesToShow[selected] + 10 < currentPerson.messages.count {
                 loadMore(amt: 10)
             }
             else {
-                loadMore(amt: currentPerson.messages.count - offset - messagesToShow[selected])
+                loadMore(amt: currentPerson.messages.count - offset[selected] - messagesToShow[selected])
             }
         }
         messagesView.reloadData()
@@ -58,25 +59,28 @@ class SearchResults: NSViewController {
     
     func heightForCell(str: String) -> Int {
         let width = messagesView.frame.size.width
-        print("width: \(width)")
+//        print("width: \(width)")
         //TODO: emojis require about 20 pixels... somehow take this into account
         let charsInWidth = width / 8
-        print("charsInWidth: \(charsInWidth)")
-        print(str)
+//        print("charsInWidth: \(charsInWidth)")
+//        print(str)
         let length = str.count
-        print("length: \(String(describing: length))")
+//        print("length: \(String(describing: length))")
         let roundedLength = length + (Int(charsInWidth) - (length % Int(charsInWidth)))
-        print("roundedLength: \(roundedLength)")
+//        print("roundedLength: \(roundedLength)")
         let height = (roundedLength / Int(charsInWidth)) * 16 + 4
-        print("height: \(height)")
+//        print("height: \(height)")
         return height
     }
     
     func updateStatus() {
+        //print(offset)
         let prevSelected = selected
         selected = tableView.selectedRow
         if selected != -1 {
-            offset = Int(results[selected].message.idx)
+            if offset[selected] == -1 {
+                offset[selected] = Int(results[selected].message.idx)
+            }
             if searchAllHandles {
                 currentPerson = people[handleIDDict[results[selected].id]!]
             }
@@ -114,6 +118,7 @@ class SearchResults: NSViewController {
         if cellHeights.count < 1 {
             cellHeights = [Int](repeating: 20, count: currentPerson.messages.count)
         }
+        offset = [Int](repeating: -1, count: results.count)
         tableView.delegate = self
         tableView.dataSource = self
         tableView.rowHeight = 44
@@ -142,7 +147,13 @@ extension SearchResults: NSTableViewDataSource {
 }
 extension SearchResults: NSTableViewDelegate {
     func makeMessageView(cell: NSTableCellView, row: Int) -> NSTableCellView {
-        let currIdx = row + offset
+        var currIdx: Int
+        if selected != -1 {
+            currIdx = row + offset[selected]
+        }
+        else {
+            currIdx = row
+        }
         if currIdx < currentPerson.messages.count {
             let cellText = currentPerson.messages[currIdx].text
             cell.textField?.stringValue = cellText
@@ -216,16 +227,18 @@ extension SearchResults: NSTableViewDelegate {
                 
             }
             var height = 0
-            if row + offset < currentPerson.messages.count {
-                if cellHeightsAll.count > 1 && (!searchByContact || searchAllHandles) {
-                    height = cellHeightsAll[handleIDDict[currentPerson.id]!][row + offset]
+            if selected != -1 {
+                if row + offset[selected] < currentPerson.messages.count {
+                    if cellHeightsAll.count > 1 && (!searchByContact || searchAllHandles) {
+                        height = cellHeightsAll[handleIDDict[currentPerson.id]!][row + offset[selected]]
+                    }
+                    else {
+                        height = cellHeights[row + offset[selected]]
+                    }
+    //                print("**LOOKING AT** \(currentPerson[row + offset])")
+    //                print("for the height: row + offset \(row + offset)")
+    //                print("for the height: height \(height)")
                 }
-                else {
-                    height = cellHeights[row + offset]
-                }
-//                print("**LOOKING AT** \(currentPerson[row + offset])")
-//                print("for the height: row + offset \(row + offset)")
-//                print("for the height: height \(height)")
             }
             if height > 0 {
 //                print("height: \(height)")
