@@ -12,23 +12,20 @@ class SearchResults: NSViewController {
 
     @IBOutlet weak var tableView: NSTableView!
     @IBOutlet weak var messagesView: NSTableView!
-    public var results = [MessageStruct]()
-    public var currentPerson = [MessageStruct]()
+    public var results = [MessageIDPair]()
+    public var currentPerson = Messages()
+    public var people = [Messages]()
+    public var searchAllHandles = false
+    public var searchByContact = false
     private var offset: Int = 0
     private var messagesToShow = [Int]()
     private var selected: Int = -1
     var tableViewCellForSizing: NSTableCellView?
     let cellIdentifier2: String = "MessageID"
     private var cellHeights = [Int]()
-    @IBAction func testButton(_ sender: Any) {
-        print("da button did the press")
-        print(results.count)
-        for (idx, result) in self.results.enumerated() {
-            print("self_row: \(result.idx); ", terminator: "")
-            print("idx: \(idx); ", terminator: "")
-            print("text: \(result.text)")
-        }
-    }
+    private var cellHeightsAll = [[Int]]()
+    public var handleIDs = [String]()
+    public var handleIDDict = [String: Int]()
     func loadMore(amt: Int) {
         if selected >= 0 && selected < results.count {
             messagesToShow[selected] += amt
@@ -47,11 +44,11 @@ class SearchResults: NSViewController {
     }
     @IBAction func loadMessagesDown(_ sender: Any) {
         if selected >= 0 && selected < results.count {
-            if offset + messagesToShow[selected] + 10 < currentPerson.count {
+            if offset + messagesToShow[selected] + 10 < currentPerson.messages.count {
                 loadMore(amt: 10)
             }
             else {
-                loadMore(amt: currentPerson.count - offset - messagesToShow[selected])
+                loadMore(amt: currentPerson.messages.count - offset - messagesToShow[selected])
             }
         }
         messagesView.reloadData()
@@ -60,6 +57,7 @@ class SearchResults: NSViewController {
     func heightForCell(str: String) -> Int {
         let width = messagesView.frame.size.width
         print("width: \(width)")
+        //TODO: emojis require about 20 pixels... somehow take this into account
         let charsInWidth = width / 8
         print("charsInWidth: \(charsInWidth)")
         print(str)
@@ -76,12 +74,14 @@ class SearchResults: NSViewController {
         let prevSelected = selected
         selected = tableView.selectedRow
         if selected != -1 {
-            offset = Int(results[selected].idx)
-            print("OFFSET: \(offset)")
+            offset = Int(results[selected].message.idx)
+            if searchAllHandles {
+                currentPerson = people[handleIDDict[results[selected].id]!]
+            }
+//            print("OFFSET: \(offset)")
             messagesView.reloadData()
             let changedIndexes = IndexSet(integersIn: 0..<messagesView.numberOfRows)
             messagesView.noteHeightOfRows(withIndexesChanged: changedIndexes)
-            print("oh boiiiiii")
         }
         else {
             selected = prevSelected
@@ -90,11 +90,16 @@ class SearchResults: NSViewController {
     
     override func viewWillAppear() {
         super.viewWillAppear()
+        if !searchByContact {
+            currentPerson = people[0]
+        }
+        if cellHeightsAll.count < 1 && searchAllHandles {
+            for person in people {
+                cellHeightsAll.append([Int](repeating: 20, count: person.messages.count))
+            }
+        }
         messagesToShow = [Int](repeating: 20, count: results.count)
-//        if cellHeights.count < 1 {
-//            cellHeights = [Int](repeating: 20, count: currentPerson.count)
-//        }
-        cellHeights = [Int](repeating: 20, count: currentPerson.count)
+        cellHeights = [Int](repeating: 20, count: currentPerson.messages.count)
         print(results.count)
         tableView.reloadData()
         //maybe:
@@ -105,7 +110,7 @@ class SearchResults: NSViewController {
         super.viewDidLoad()
         // Do view setup here.
         if cellHeights.count < 1 {
-            cellHeights = [Int](repeating: 20, count: currentPerson.count)
+            cellHeights = [Int](repeating: 20, count: currentPerson.messages.count)
         }
         tableView.delegate = self
         tableView.dataSource = self
@@ -135,30 +140,29 @@ extension SearchResults: NSTableViewDataSource {
 }
 extension SearchResults: NSTableViewDelegate {
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
-        //var text: String = ""
         let cellIdentifier1: String = "MatchID"
         let cellIdentifier2: String = "MessageID"
-//        if row >= results.count {
-//            return nil
-//        }
-        //text = results[row][1]
         if let cell = tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier(cellIdentifier1), owner: nil) as? NSTableCellView {
             if row < results.count {
-                cell.textField?.stringValue = results[row].text
-                cell.toolTip = results[row].date
+                cell.textField?.stringValue = results[row].message.text
+                cell.toolTip = results[row].message.date
             }
-            //cell.textField?.maximumNumberOfLines = 2
             return cell
         }
         else if let cell = tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier(cellIdentifier2), owner: nil) as? NSTableCellView {
             let currIdx = row + offset
-            if currIdx < currentPerson.count {
-                let cellText = currentPerson[currIdx].text
+            if currIdx < currentPerson.messages.count {
+                let cellText = currentPerson.messages[currIdx].text
                 cell.textField?.stringValue = cellText
-                print("CURRENT INDEX: \(currIdx)")
-                cellHeights[currIdx] = heightForCell(str: cellText)
-                cell.toolTip = currentPerson[currIdx].date
-                if !currentPerson[currIdx].is_from_me! {
+//                print("CURRENT INDEX: \(currIdx)")
+                if cellHeightsAll.count > 1 && (!searchByContact || searchAllHandles) {
+                    cellHeightsAll[handleIDDict[currentPerson.id]!][currIdx] = heightForCell(str: cellText)
+                }
+                else {
+                    cellHeights[currIdx] = heightForCell(str: cellText)
+                }
+                cell.toolTip = currentPerson.messages[currIdx].date
+                if !currentPerson.messages[currIdx].is_from_me! {
                     cell.textField?.textColor = NSColor.red
 //                    cell.textField?.backgroundColor = NSColor.blue
 //                    cell.textField?.isBezeled = false
@@ -184,27 +188,20 @@ extension SearchResults: NSTableViewDelegate {
                 return 17
                 
             }
-//            if row + offset < currentPerson.count {
-//                tableCellView.textField?.stringValue = currentPerson[row + offset][1]
-//            }
-//            let width = messagesView.frame.size.width
-//            let charsInWidth = width / 8
-//            print("charsInWidth: \(charsInWidth)")
-//            print(tableViewCellForSizing?.textField?.stringValue)
-//            let length = tableViewCellForSizing?.textField?.stringValue.count
-//            print("length: \(String(describing: length))")
-//            let roundedLength = length! + (Int(charsInWidth) - (length! % Int(charsInWidth)))
-//            print(width)
-//            let height = (Int(charsInWidth) * 20) / roundedLength
             var height = 0
-            if row + offset < currentPerson.count {
-                height = cellHeights[row + offset]
-                print("**LOOKING AT** \(currentPerson[row + offset])")
-                print("for the height: row + offset \(row + offset)")
-                print("for the height: height \(height)")
+            if row + offset < currentPerson.messages.count {
+                if cellHeightsAll.count > 1 && (!searchByContact || searchAllHandles) {
+                    height = cellHeightsAll[handleIDDict[currentPerson.id]!][row + offset]
+                }
+                else {
+                    height = cellHeights[row + offset]
+                }
+//                print("**LOOKING AT** \(currentPerson[row + offset])")
+//                print("for the height: row + offset \(row + offset)")
+//                print("for the height: height \(height)")
             }
             if height > 0 {
-                print("height: \(height)")
+//                print("height: \(height)")
                 return CGFloat(height)
             }
         }

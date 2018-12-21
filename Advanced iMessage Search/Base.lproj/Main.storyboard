@@ -977,6 +977,23 @@
                                     <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                 </textFieldCell>
                             </textField>
+                            <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="oks-ia-Sol">
+                                <rect key="frame" x="82" y="239" width="146" height="18"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <buttonCell key="cell" type="check" title="Search all messages" bezelStyle="regularSquare" imagePosition="left" inset="2" id="bpq-6Y-HJS">
+                                    <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                                    <font key="font" metaFont="system"/>
+                                </buttonCell>
+                            </button>
+                            <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Wry-Yh-PgE">
+                                <rect key="frame" x="235" y="241" width="187" height="17"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <textFieldCell key="cell" lineBreakMode="clipping" title="Warning: may take a long time" id="FOL-xj-HkZ">
+                                    <font key="font" metaFont="system"/>
+                                    <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
+                                    <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                                </textFieldCell>
+                            </textField>
                         </subviews>
                     </view>
                     <connections>
@@ -985,6 +1002,7 @@
                         <outlet property="contactName" destination="bKS-ka-235" id="nUw-IW-Yig"/>
                         <outlet property="countries" destination="ETu-li-vLH" id="Ut6-dG-3Yn"/>
                         <outlet property="fromDate" destination="Kus-4R-l6O" id="zfp-Lh-n6S"/>
+                        <outlet property="searchAll" destination="oks-ia-Sol" id="oAC-SM-79v"/>
                         <outlet property="searchBy" destination="thM-j1-I5a" id="lwc-F9-9gs"/>
                         <outlet property="searchDate" destination="aob-Nx-Mq2" id="Stf-ZP-zCX"/>
                         <outlet property="searchMessage" destination="cmJ-jN-cB8" id="qR8-dC-zuo"/>
