@@ -13,7 +13,7 @@ import SQLite3
 class SearchUI: NSViewController {
     
     public var fullPath = ""
-    private let opts = ["Contains", "Starts With", "Ends With", "Exactly"]
+    private let opts = ["Contains", "Starts With", "Ends With", "Exactly", "Regex"]
     public var results = [MessageIDPair]()
     public var resultsTab: SearchResults?
     public var people = [Messages]()
@@ -27,6 +27,7 @@ class SearchUI: NSViewController {
     public var handleIDDict = [String: Int]()
     private var searchByContact = true
     public var searchAllHandles = false
+    public var haveSearchedAll = false
     
     internal let SQLITE_STATIC = unsafeBitCast(0, to: sqlite3_destructor_type.self)
     internal let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
@@ -49,19 +50,6 @@ class SearchUI: NSViewController {
     @IBOutlet weak var searchOpts: NSPopUpButton!
     @IBOutlet weak var contactID: NSTextField!
     @IBOutlet weak var searchText: NSTextField!
-//    private func contactsGranted() {
-//        print("heyo in the contacts granted function")
-//        let contacts = try! store.unifiedContacts(matching: CNContact.predicateForContacts(matchingName: contactID.stringValue), keysToFetch:[CNContactGivenNameKey as CNKeyDescriptor, CNContactFamilyNameKey as CNKeyDescriptor])
-//        // Checking if phone number is available for the given contact.
-//        if (contacts[0].isKeyAvailable(CNContactPhoneNumbersKey)) {
-//            print("\(contacts[0].phoneNumbers)")
-//        } else {
-//            //Refetch the keys
-//            let keysToFetch = [CNContactGivenNameKey, CNContactFamilyNameKey, CNContactPhoneNumbersKey]
-//            let refetchedContact = try! store.unifiedContact(withIdentifier: contacts[0].identifier, keysToFetch: keysToFetch as [CNKeyDescriptor])
-//            print("\(refetchedContact.phoneNumbers)")
-//        }
-//    }
     private func isPhoneNumber(num: String) -> Bool {
         return true
     }
@@ -91,6 +79,27 @@ class SearchUI: NSViewController {
         dateFormatter.dateFormat = "MM/dd/yy, h:mm:ss a"
         return dateFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(date/1000000000 + 978307200)))
     }
+    private func dateFromString(dateStr: String) -> Date {
+        dateFormatter.amSymbol = "AM"
+        dateFormatter.pmSymbol = "PM"
+        dateFormatter.dateFormat = "MM/dd/yy, h:mm:ss a"
+        return dateFormatter.date(from: dateStr)!
+    }
+    private func appendToResultsIf(cond: Bool, message: Message, idForSearch: String) -> Bool{
+        if cond {
+            if anyDate.state == .on {
+                results.append(MessageIDPair(message: message, id: idForSearch))
+                return true
+            }
+            else { //search includes date parameters
+                if dateFromString(dateStr: message.date).isBetween(fromDate.dateValue, and: toDate.dateValue) {
+                    results.append(MessageIDPair(message: message, id: idForSearch))
+                    return true
+                }
+            }
+        }
+        return false
+    }
     private func searchDB(phone: String, search: String) -> Int {
         searchAllHandles = searchAll.state == .on
         //Search must include some restriction (date or text)
@@ -104,8 +113,7 @@ class SearchUI: NSViewController {
         }
         var statement: OpaquePointer?
         var numHandles = 0
-        people = [Messages]()
-        if searchAllHandles { //searching through all messages
+        if searchAllHandles && !haveSearchedAll { //searching through all messages
             if sqlite3_prepare_v2(db, "select distinct id from handle", -1, &statement, nil) != SQLITE_OK {
                 let errmsg = String(cString: sqlite3_errmsg(db)!)
                 print("error preparing select: \(errmsg)")
@@ -123,69 +131,33 @@ class SearchUI: NSViewController {
         if !searchAllHandles {
             numHandles = 1
         }
+        else if haveSearchedAll && searchAllHandles {
+            numHandles = handleIDs.count
+        }
         var resultsIdx = 0
         //drop table if exists and create table of one_person with entries numbered
         for handleIdx in 0..<numHandles {
+            var idForSearch = ""
             //clear currentPerson
             var currentPerson = [Message]()
-            if sqlite3_exec(db, "drop table if exists numbered_person", nil, nil, nil) != SQLITE_OK {
-                let errmsg = String(cString: sqlite3_errmsg(db)!)
-                print("error dropping table: \(errmsg)")
-            }
-            if sqlite3_exec(db, "create table numbered_person (guid TEXT, text TEXT, date INTEGER, is_from_me INTEGER, idx INTEGER)", nil, nil, nil) != SQLITE_OK {
-                let errmsg = String(cString: sqlite3_errmsg(db)!)
-                print("error creating numbered_person table: \(errmsg)")
-            }
-            var onePersQuery = "select chat.guid, message.text, message.date, message.is_from_me, message.ROWID as row from chat_message_join inner join chat on chat.ROWID = chat_message_join.chat_id inner join message on message.ROWID = chat_message_join.message_id and message.date = chat_message_join.message_date where chat.ROWID in ( select chat.ROWID from chat_handle_join inner join chat on chat.ROWID = chat_handle_join.chat_id inner join handle on handle.ROWID = chat_handle_join.handle_id where chat.chat_identifier = handle.id and handle.id in (?"
+            var numPossibleChatIDs = 0
+            var phoneNumsAndEmails = [String]()
+            var thisPhone = ""
             if searchByContact && !searchAllHandles { //search by contact
                 let contact = contactsDict[contactName.titleOfSelectedItem!]
-                var numPossibleChatIDs = 0
                 //TODO: make sure there aren't duplicate phone numbers or emails
                 numPossibleChatIDs += (contact?.emailAddresses.count)!
                 numPossibleChatIDs += (contact?.phoneNumbers.count)!
-                if numPossibleChatIDs == 0 {
-                    return 0
-                }
-                else {
-                    for _ in 0..<numPossibleChatIDs {
-                        onePersQuery += ",?"
-                    }
-                }
-            }
-            onePersQuery += ")) order by message.date"
-            if sqlite3_prepare_v2(db, onePersQuery, -1, &statement, nil) != SQLITE_OK {
-                let errmsg = String(cString: sqlite3_errmsg(db)!)
-                print("error preparing select: \(errmsg)")
-            }
-            var idForSearch = ""
-            if searchByContact && !searchAllHandles { //search by contact
-                var paramNum = 1
-                let contact = contactsDict[contactName.titleOfSelectedItem!]
                 for phoneNum in (contact?.phoneNumbers)! {
-                    print(formatPhoneNumber(num: phoneNum.value.stringValue, hasCountryCode: true))
-                    let formattedNum = formatAnyPhoneNumber(phoneNum: phoneNum)
-                    idForSearch += (formattedNum + ",")
-                    if sqlite3_bind_text(statement, Int32(paramNum), formattedNum, -1, SQLITE_TRANSIENT) != SQLITE_OK {
-                        let errmsg = String(cString: sqlite3_errmsg(db)!)
-                        print("failure binding phone number: \(errmsg)")
-                    }
-                    paramNum += 1
+                    phoneNumsAndEmails.append(formatAnyPhoneNumber(phoneNum: phoneNum))
+                    idForSearch += (phoneNumsAndEmails.last! + ",")
                 }
                 for email in (contact?.emailAddresses)! {
-                    print(email.value as String)
+                    phoneNumsAndEmails.append(email.value as String)
                     idForSearch += (email.value as String + ",")
-                    if sqlite3_bind_text(statement, Int32(paramNum), email.value as String, -1, SQLITE_TRANSIENT) != SQLITE_OK {
-                        let errmsg = String(cString: sqlite3_errmsg(db)!)
-                        print("failure binding email: \(errmsg)")
-                    }
-                    paramNum += 1
-                }
-                if paramNum > 1 { //remove trailing comma
-                    idForSearch.remove(at: idForSearch.index(before: idForSearch.endIndex))
                 }
             }
             else { //search by phone number
-                var thisPhone = ""
                 if searchAllHandles {
                     thisPhone = handleIDs[handleIdx]
                 }
@@ -193,132 +165,117 @@ class SearchUI: NSViewController {
                     thisPhone = phone
                 }
                 idForSearch = thisPhone
-                if sqlite3_bind_text(statement, 1, thisPhone, -1, SQLITE_TRANSIENT) != SQLITE_OK {
+            }
+            if !haveSearchedAll || !searchAllHandles { //in the future change this to allow reuse of the people array no matter if you're searching for all, contact,  or phone number
+                var onePersQuery = "select chat.guid, message.text, message.date, message.is_from_me, message.ROWID as row from chat_message_join inner join chat on chat.ROWID = chat_message_join.chat_id inner join message on message.ROWID = chat_message_join.message_id and message.date = chat_message_join.message_date where chat.ROWID in ( select chat.ROWID from chat_handle_join inner join chat on chat.ROWID = chat_handle_join.chat_id inner join handle on handle.ROWID = chat_handle_join.handle_id where chat.chat_identifier = handle.id and handle.id in (?"
+                if searchByContact && !searchAllHandles { //search by contact
+                    if numPossibleChatIDs == 0 {
+                        return 0
+                    }
+                    else {
+                        for _ in 0..<numPossibleChatIDs {
+                            onePersQuery += ",?"
+                        }
+                    }
+                }
+                onePersQuery += ")) order by message.date"
+                if sqlite3_prepare_v2(db, onePersQuery, -1, &statement, nil) != SQLITE_OK {
                     let errmsg = String(cString: sqlite3_errmsg(db)!)
-                    print("failure binding phone number: \(errmsg)")
+                    print("error preparing select: \(errmsg)")
+                }
+                //var idForSearch = ""
+                if searchByContact && !searchAllHandles { //search by contact
+                    var paramNum = 1
+                    for phoneOrEmail in phoneNumsAndEmails {
+                        if sqlite3_bind_text(statement, Int32(paramNum), phoneOrEmail, -1, SQLITE_TRANSIENT) != SQLITE_OK {
+                            let errmsg = String(cString: sqlite3_errmsg(db)!)
+                            print("failure binding phone number or email: \(errmsg)")
+                        }
+                        paramNum += 1
+                    }
+                    if paramNum > 1 { //remove trailing comma
+                        idForSearch.remove(at: idForSearch.index(before: idForSearch.endIndex))
+                    }
+                }
+                else { //search by phone number
+                    if sqlite3_bind_text(statement, 1, thisPhone, -1, SQLITE_TRANSIENT) != SQLITE_OK {
+                        let errmsg = String(cString: sqlite3_errmsg(db)!)
+                        print("failure binding phone number: \(errmsg)")
+                    }
+                }
+                var idx = 0
+                while sqlite3_step(statement) == SQLITE_ROW {
+                    var text = ""
+                    if let cText = sqlite3_column_text(statement, 1) {
+                        text = String(cString: cText)
+                    }
+                    let date = sqlite3_column_int64(statement, 2)
+                    let strDate = formatDate(date: date)
+                    let is_from_me = sqlite3_column_int64(statement, 3)
+                    //let self_row = sqlite3_column_int64(statement, 4)
+                    currentPerson.append(Message(idx: Int64(idx), text: text, is_from_me: is_from_me, date: strDate))
+                    idx += 1
+                }
+            //here is where the numberedperson stops
+                if searchAllHandles && haveSearchedAll {
+                    idForSearch = handleIDs[handleIdx]
+                }
+                if !searchAllHandles {
+                    contactOrPhonePerson = Messages(messages: currentPerson, id: idForSearch)
+                }
+                if searchAllHandles  && !haveSearchedAll{
+                    people.append(Messages(messages: currentPerson, id: idForSearch))
                 }
             }
-            var idx = 0
-            while sqlite3_step(statement) == SQLITE_ROW {
-                var statement2: OpaquePointer?
-                var guid = ""
-                if let cGuid = sqlite3_column_text(statement, 0) {
-                    guid = String(cString: cGuid)
-                }
-                var text = ""
-                if let cText = sqlite3_column_text(statement, 1) {
-                    text = String(cString: cText)
-                }
-                let date = sqlite3_column_int64(statement, 2)
-                let strDate = formatDate(date: date)
-                let is_from_me = sqlite3_column_int64(statement, 3)
-                //let self_row = sqlite3_column_int64(statement, 4)
-                currentPerson.append(Message(idx: Int64(idx), text: text, is_from_me: is_from_me, date: strDate))
-                //print("guid: \(guid); text: \(text); date: \(date); is_from_me: \(is_from_me); self_row: \(self_row); idx: \(idx)")
-                if sqlite3_prepare_v2(db, "insert into numbered_person values (?, ?, ?, ?, ?)", -1, &statement2, nil) != SQLITE_OK {
-                    let errmsg = String(cString: sqlite3_errmsg(db)!)
-                    print("error inserting into numbered_person: \(errmsg)")
-                }
-                if sqlite3_bind_text(statement2, 1, guid, -1, SQLITE_TRANSIENT) != SQLITE_OK {
-                    let errmsg = String(cString: sqlite3_errmsg(db)!)
-                    print("failure binding guid: \(errmsg)")
-                }
-                if sqlite3_bind_text(statement2, 2, text, -1, SQLITE_TRANSIENT) != SQLITE_OK {
-                    let errmsg = String(cString: sqlite3_errmsg(db)!)
-                    print("failure binding text: \(errmsg)")
-                }
-                if sqlite3_bind_int64(statement2, 3, date) != SQLITE_OK {
-                    let errmsg = String(cString: sqlite3_errmsg(db)!)
-                    print("failure binding date: \(errmsg)")
-                }
-                if sqlite3_bind_int64(statement2, 4, is_from_me) != SQLITE_OK {
-                    let errmsg = String(cString: sqlite3_errmsg(db)!)
-                    print("failure binding is_from_me: \(errmsg)")
-                }
-                if sqlite3_bind_int64(statement2, 5, Int64(idx)) != SQLITE_OK {
-                    let errmsg = String(cString: sqlite3_errmsg(db)!)
-                    print("failure binding idx: \(errmsg)")
-                }
-                if sqlite3_step(statement2) != SQLITE_DONE {
-                    let errmsg = String(cString: sqlite3_errmsg(db)!)
-                    print("failure inserting into numbered_person: \(errmsg)")
-                }
-                if sqlite3_finalize(statement2) != SQLITE_OK {
-                    let errmsg = String(cString: sqlite3_errmsg(db)!)
-                    print("error finalizing prepared statement: \(errmsg)")
-                }
-                statement2 = nil
-                idx += 1
+            else { //searchall has happened so use the value that's already there
+                currentPerson = people[handleIdx].messages
             }
-            if searchByContact {
-                contactOrPhonePerson = Messages(messages: currentPerson, id: idForSearch)
+            //beginning the query that gets stuff from numbered_person
+            
+            if handleIdx == 0 { //only reset results if we're on the first handle
+                self.results = [MessageIDPair]()
             }
-            people.append(Messages(messages: currentPerson, id: idForSearch))
-            var sqlSearch = ""
-            var numPersQuery = ""
                 //print("HEYO THIS IS THE SEARCHOPTS" + String(searchOpts.titleOfSelectedItem))
             switch(searchOpts.titleOfSelectedItem) {
             case self.opts[0]:
-                sqlSearch = "%" + search + "%"
+                for message in currentPerson {
+                    if appendToResultsIf(cond: message.text.lowercased().range(of: search) != nil, message: message, idForSearch: idForSearch) {
+                        resultsIdx += 1
+                    }
+                }
                 break
             case self.opts[1]:
-                sqlSearch = search + "%"
+                for message in currentPerson {
+                    if appendToResultsIf(cond: message.text.lowercased().hasPrefix(search), message: message, idForSearch: idForSearch) {
+                        resultsIdx += 1
+                    }
+                }
                 break
             case self.opts[2]:
-                sqlSearch = "%" + search
+                for message in currentPerson {
+                    if appendToResultsIf(cond: message.text.lowercased().hasSuffix(search), message: message, idForSearch: idForSearch) {
+                        resultsIdx += 1
+                    }
+                }
                 break
             case self.opts[3]:
-                sqlSearch = search
+                for message in currentPerson {
+                    if appendToResultsIf(cond: message.text.lowercased() == search, message: message, idForSearch: idForSearch) {
+                        resultsIdx += 1
+                    }
+                }
+                break
+            case self.opts[4]:
+                for message in currentPerson {
+                    if appendToResultsIf(cond: message.text.lowercased().range(of: search, options: .regularExpression, range: nil, locale: nil) != nil, message: message, idForSearch: idForSearch) {
+                        resultsIdx += 1
+                    }
+                }
                 break
             default:
                 break
             }
-            if anyDate.state == .off {
-                dateFormatter.timeStyle = DateFormatter.Style.none
-                dateFormatter.dateFormat = "YYYY-MM-dd"
-                fromDateStr = dateFormatter.string(from: fromDate.dateValue)
-                //add one day to the end date to make it inclusive
-                toDateStr = dateFormatter.string(from: toDate.dateValue.addingTimeInterval(60 * 60 * 24))
-                let dateConversion = "datetime(date/1000000000 + 978307200, 'unixepoch', 'localtime')"
-                //print("THE DATE IS \(dateConversion)")
-                if !search.isEmpty {
-                    numPersQuery = "select idx, text, date from numbered_person where text like ? and \(dateConversion) > \"\(fromDateStr)\" and \(dateConversion) < \"\(toDateStr)\" order by date"
-                }
-                else {
-                    numPersQuery = "select idx, text, date from numbered_person where \(dateConversion) > \"\(fromDateStr)\" and \(dateConversion) < \"\(toDateStr)\" order by date limit 1"
-                }
-                //reset to selected date and reformat for display message purposes
-                dateFormatter.dateFormat = "MM/dd/YYYY"
-                fromDateStr = dateFormatter.string(from: fromDate.dateValue)
-                toDateStr = dateFormatter.string(from: toDate.dateValue)
-            }
-            else {
-                numPersQuery = "select idx, text, date from numbered_person where text like ? order by date"
-            }
-            if sqlite3_prepare_v2(db, numPersQuery, -1, &statement, nil) != SQLITE_OK {
-                let errmsg = String(cString: sqlite3_errmsg(db)!)
-                print("error selecting from numbered_person: \(errmsg)")
-            }
-            if !(anyDate.state == .off && search.isEmpty){
-                if sqlite3_bind_text(statement, 1, sqlSearch, -1, SQLITE_TRANSIENT) != SQLITE_OK {
-                    let errmsg = String(cString: sqlite3_errmsg(db)!)
-                    print("failure binding sqlSearch: \(errmsg)")
-                }
-            }
-            if handleIdx == 0 { //only reset results if we're on the first handle
-                self.results = [MessageIDPair]()
-            }
-            while sqlite3_step(statement) == SQLITE_ROW {
-                let self_row = sqlite3_column_int64(statement, 0) //the idx of numbered_person
-                var text = ""
-                if let cText = sqlite3_column_text(statement, 1) {
-                    text = String(cString: cText)
-                }
-                let date = formatDate(date: sqlite3_column_int64(statement, 2))
-                self.results.append(MessageIDPair(message: Message(idx: self_row, text: text, date: date), id: idForSearch))
-                resultsIdx += 1
-            }
-        }
+        } //bracket ending the big for loop
         print("everything up to here worked")
         //close database connection
         if sqlite3_close(db) != SQLITE_OK {
@@ -331,12 +288,15 @@ class SearchUI: NSViewController {
             let date1 = dateFormatter.date(from: $1.message.date)!
             return date0 < date1
         }
+        if searchAllHandles {
+            haveSearchedAll = true
+        }
         return resultsIdx
     }
     //var store: CNContactStore!
     @IBAction func sayButtonClicked(_ sender: Any) {
         var id = contactID.stringValue
-        let search = searchText.stringValue
+        let search = searchText.stringValue.lowercased()
         searchByContact = searchBy.titleOfSelectedItem == "Contact"// && searchAll.state == .off
         if !self.fullPath.isEmpty {
             print(self.fullPath)
@@ -376,9 +336,10 @@ class SearchUI: NSViewController {
                 resultsTab?.handleIDDict = self.handleIDDict
                 resultsTab?.handleIDs = self.handleIDs
                 resultsTab?.searchByContact = self.searchByContact
-                if searchByContact {
-                    resultsTab?.currentPerson = contactOrPhonePerson
-                }
+                //if searchByContact {
+                resultsTab?.currentPerson = contactOrPhonePerson
+                //}
+                resultsTab?.haveSearchedAll = self.haveSearchedAll
             }
         }
         else {
@@ -660,4 +621,10 @@ class SearchUI: NSViewController {
         "Zimbabwe +263"
     ];
     
+}
+
+extension Date {
+    func isBetween(_ date1: Date, and date2: Date) -> Bool {
+        return (min(date1, date2) ... max(date1, date2)).contains(self)
+    }
 }

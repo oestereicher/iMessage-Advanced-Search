@@ -29,6 +29,7 @@ class SearchResults: NSViewController {
     public var handleIDs = [String]()
     public var handleIDDict = [String: Int]()
     public var contactsDict = [String: CNContact]()
+    public var haveSearchedAll = false
     func loadMore(amt: Int) {
         if selected >= 0 && selected < results.count {
             messagesToShow[selected] += amt
@@ -96,14 +97,23 @@ class SearchResults: NSViewController {
     
     override func viewWillAppear() {
         super.viewWillAppear()
-        if !searchByContact {
+        if searchAllHandles {
             currentPerson = people[0]
         }
-        if cellHeightsAll.count < 1 && searchAllHandles {
-            for person in people {
-                cellHeightsAll.append([Int](repeating: 20, count: person.messages.count))
+        if searchAllHandles {
+            if cellHeightsAll.count < 1 { //search all and no cell heights recorded
+                for person in people {
+                    cellHeightsAll.append([Int](repeating: 20, count: person.messages.count))
+                }
+            }
+            else if cellHeightsAll.count == 1 { //search all and one set of cell heights recorded
+                cellHeightsAll = [[Int]]()
+                for person in people {
+                    cellHeightsAll.append([Int](repeating: 20, count: person.messages.count))
+                }
             }
         }
+        offset = [Int](repeating: -1, count: results.count)
         messagesToShow = [Int](repeating: 20, count: results.count)
         cellHeights = [Int](repeating: 20, count: currentPerson.messages.count)
         print(results.count)
@@ -118,7 +128,6 @@ class SearchResults: NSViewController {
         if cellHeights.count < 1 {
             cellHeights = [Int](repeating: 20, count: currentPerson.messages.count)
         }
-        offset = [Int](repeating: -1, count: results.count)
         tableView.delegate = self
         tableView.dataSource = self
         tableView.rowHeight = 44
@@ -148,13 +157,13 @@ extension SearchResults: NSTableViewDataSource {
 extension SearchResults: NSTableViewDelegate {
     func makeMessageView(cell: NSTableCellView, row: Int) -> NSTableCellView {
         var currIdx: Int
-        if selected != -1 {
+        if selected != -1 && selected < offset.count {
             currIdx = row + offset[selected]
         }
         else {
             currIdx = row
         }
-        if currIdx < currentPerson.messages.count {
+        if currIdx < currentPerson.messages.count && currIdx != -1 {
             let cellText = currentPerson.messages[currIdx].text
             cell.textField?.stringValue = cellText
             //                print("CURRENT INDEX: \(currIdx)")
@@ -227,13 +236,21 @@ extension SearchResults: NSTableViewDelegate {
                 
             }
             var height = 0
+            
+            var currRow : Int
             if selected != -1 {
-                if row + offset[selected] < currentPerson.messages.count {
+                if selected < offset.count {
+                    currRow = row + offset[selected]
+                }
+                else {
+                    currRow = row
+                }
+                if currRow < currentPerson.messages.count && currRow != -1 {
                     if cellHeightsAll.count > 1 && (!searchByContact || searchAllHandles) {
-                        height = cellHeightsAll[handleIDDict[currentPerson.id]!][row + offset[selected]]
+                        height = cellHeightsAll[handleIDDict[currentPerson.id]!][currRow]
                     }
                     else {
-                        height = cellHeights[row + offset[selected]]
+                        height = cellHeights[currRow]
                     }
     //                print("**LOOKING AT** \(currentPerson[row + offset])")
     //                print("for the height: row + offset \(row + offset)")
