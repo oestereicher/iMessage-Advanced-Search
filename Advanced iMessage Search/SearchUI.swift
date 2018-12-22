@@ -265,6 +265,13 @@ class SearchUI: NSViewController {
                     }
                 }
                 break
+            case self.opts[4]:
+                for message in currentPerson {
+                    if appendToResultsIf(cond: message.text.lowercased().range(of: search, options: .regularExpression, range: nil, locale: nil) != nil, message: message, idForSearch: idForSearch) {
+                        resultsIdx += 1
+                    }
+                }
+                break
             default:
                 break
             }
