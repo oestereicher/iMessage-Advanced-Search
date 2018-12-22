@@ -1069,7 +1069,7 @@
                                                                     <imageCell key="cell" refusesFirstResponder="YES" alignment="left" imageScaling="proportionallyDown" image="NSActionTemplate" id="zk0-yk-Fdf"/>
                                                                 </imageView>
                                                                 <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" fixedFrame="YES" allowsExpansionToolTips="YES" translatesAutoresizingMaskIntoConstraints="NO" id="EzD-9x-Kvd">
-                                                                    <rect key="frame" x="37" y="3" width="197" height="40"/>
+                                                                    <rect key="frame" x="49" y="3" width="185" height="40"/>
                                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMinY="YES"/>
                                                                     <textFieldCell key="cell" sendsActionOnEndEditing="YES" title="Table View Cell" id="Vtp-z8-03y">
                                                                         <font key="font" metaFont="system"/>

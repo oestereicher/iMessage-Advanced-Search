@@ -195,12 +195,21 @@ extension SearchResults: NSTableViewDelegate {
         if searchAllHandles {
             if let cell = tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier(cellIDMatchAll), owner: nil) as? NSTableCellView {
                 if row < results.count {
-                    cell.textField?.stringValue = results[row].message.text
                     cell.toolTip = results[row].message.date
                     let contact = contactsDict[results[row].id]
                     if contact != nil && (contact?.imageDataAvailable)! {
                         cell.imageView?.image = NSImage(data: (contact?.imageData!)!)
                     }
+                    if contact == nil { //no contact, just show the given id
+                        cell.textField?.stringValue = results[row].id + "\n"
+                    }
+                    else if !(contact?.nickname.isEmpty)! { //contact with nickname, prefer nickname
+                        cell.textField?.stringValue = (contact?.nickname)! + "\n"
+                    }
+                    else { //contact without nickname, show name
+                        cell.textField?.stringValue = (contact?.givenName)! + " " + (contact?.familyName)! + "\n"
+                    }
+                    cell.textField?.stringValue += results[row].message.text
                 }
                 return cell
             }
