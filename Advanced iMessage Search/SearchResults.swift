@@ -18,7 +18,6 @@ class SearchResults: NSViewController {
     public var people = [Messages]()
     public var searchAllHandles = false
     public var searchByContact = false
-    //TODO: array of offsets to keep track for each result
     private var offset = [Int]()
     private var messagesToShow = [Int]()
     private var selected: Int = -1
@@ -30,6 +29,7 @@ class SearchResults: NSViewController {
     public var handleIDDict = [String: Int]()
     public var contactsDict = [String: CNContact]()
     public var haveSearchedAll = false
+    public var gcIDHandlesDict = [String: [String]]()
     func loadMore(amt: Int) {
         if selected >= 0 && selected < results.count {
             messagesToShow[selected] += amt
@@ -74,6 +74,15 @@ class SearchResults: NSViewController {
         return height
     }
     
+    func determineContactName(contact: CNContact) -> String {
+        if !contact.nickname.isEmpty {
+            return contact.nickname
+        }
+        else {
+            return contact.givenName + " " + contact.familyName
+        }
+    }
+    
     func updateStatus() {
         //print(offset)
         let prevSelected = selected
@@ -115,6 +124,7 @@ class SearchResults: NSViewController {
         }
         offset = [Int](repeating: -1, count: results.count)
         messagesToShow = [Int](repeating: 20, count: results.count)
+        
         cellHeights = [Int](repeating: 20, count: currentPerson.messages.count)
         print(results.count)
         tableView.reloadData()
@@ -164,8 +174,21 @@ extension SearchResults: NSTableViewDelegate {
             currIdx = row
         }
         if currIdx < currentPerson.messages.count && currIdx != -1 {
-            let cellText = currentPerson.messages[currIdx].text
-            cell.textField?.stringValue = cellText
+            let currMessage = currentPerson.messages[currIdx]
+            let cellText = currMessage.text
+            cell.textField?.stringValue = ""
+            if currMessage.handle != nil { //indicates that this message is part of a group chat
+                let contact = contactsDict[currMessage.handle!]
+                if !currMessage.is_from_me! {
+                    if contact == nil {
+                        cell.textField?.stringValue += currMessage.handle! + "| "
+                    }
+                    else {
+                        cell.textField?.stringValue += determineContactName(contact: contact!) + "| "
+                    }
+                }
+            }
+            cell.textField?.stringValue += cellText
             //                print("CURRENT INDEX: \(currIdx)")
             if cellHeightsAll.count > 1 && (!searchByContact || searchAllHandles) {
                 cellHeightsAll[handleIDDict[currentPerson.id]!][currIdx] = heightForCell(str: cellText)
@@ -175,7 +198,7 @@ extension SearchResults: NSTableViewDelegate {
             }
             cell.toolTip = currentPerson.messages[currIdx].date
             if !currentPerson.messages[currIdx].is_from_me! {
-                cell.textField?.textColor = NSColor.red
+                cell.textField?.textColor = NSColor.init(red: 0.262745098, green: 0.5215686275, blue: 0.937254902, alpha: 1.0)
                 //                    cell.textField?.backgroundColor = NSColor.blue
                 //                    cell.textField?.isBezeled = false
                 //                    cell.textField?.isEditable = false
@@ -195,19 +218,39 @@ extension SearchResults: NSTableViewDelegate {
         if searchAllHandles {
             if let cell = tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier(cellIDMatchAll), owner: nil) as? NSTableCellView {
                 if row < results.count {
-                    cell.toolTip = results[row].message.date
+                    let currMessage = results[row].message
+                    cell.toolTip = currMessage.date
                     let contact = contactsDict[results[row].id]
                     if contact != nil && (contact?.imageDataAvailable)! {
                         cell.imageView?.image = NSImage(data: (contact?.imageData!)!)
                     }
                     if contact == nil { //no contact, just show the given id
-                        cell.textField?.stringValue = results[row].id + "\n"
+                        if currMessage.displayName != nil {
+                            if currMessage.displayName == "Group chat" {
+                                var cellText = ""
+                                let gcHandles = gcIDHandlesDict[results[row].id]
+                                for handle in gcHandles! {
+                                    let contact = contactsDict[handle]
+                                    if contact == nil {
+                                        cellText += (handle + ", ")
+                                    }
+                                    else {
+                                        cellText += (determineContactName(contact: contact!) + ", ")
+                                    }
+                                }
+                                cellText.removeLast(2)
+                                cell.textField?.stringValue = cellText + "\n"
+                            }
+                            else {
+                                cell.textField?.stringValue = currMessage.displayName! + "\n"
+                            }
+                        }
+                        else {
+                            cell.textField?.stringValue = results[row].id + "\n"
+                        }
                     }
-                    else if !(contact?.nickname.isEmpty)! { //contact with nickname, prefer nickname
-                        cell.textField?.stringValue = (contact?.nickname)! + "\n"
-                    }
-                    else { //contact without nickname, show name
-                        cell.textField?.stringValue = (contact?.givenName)! + " " + (contact?.familyName)! + "\n"
+                    else {
+                        cell.textField?.stringValue = determineContactName(contact: contact!) + "\n"
                     }
                     cell.textField?.stringValue += results[row].message.text
                 }

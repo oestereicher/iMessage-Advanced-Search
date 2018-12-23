@@ -25,6 +25,10 @@ class SearchUI: NSViewController {
     let dateFormatter = DateFormatter()
     public var handleIDs = [String]()
     public var handleIDDict = [String: Int]()
+    //we want to be able to get all the gcIDs that each handle is associated with
+    //so I should be able to put in a handle and get a list of gcIDs
+    public var gcIDHandlesDict = [String: [String]]() //chat* id --> handles in the chat
+    public var handleGCsDict = [String: [String]]() //handle --> chat* ids its part of
     private var searchByContact = true
     public var searchAllHandles = false
     public var haveSearchedAll = false
@@ -64,8 +68,8 @@ class SearchUI: NSViewController {
     private func formatAnyPhoneNumber(phoneNum: CNLabeledValue<CNPhoneNumber>) -> String {
         let phoneStr = phoneNum.value.stringValue
         var formattedNum = ""
-        //assumes that there is a country code in the number if there are more than 10 digits
-        if phoneStr.replacingOccurrences( of:"[^0-9]", with: "", options: .regularExpression).count > 10 {
+        //assumes that there is a country code in the number if there are more than 10 digits or if it begins with a +
+        if phoneStr.replacingOccurrences( of:"[^0-9]", with: "", options: .regularExpression).count > 10 || phoneStr[phoneStr.startIndex] == "+" {
             formattedNum = formatPhoneNumber(num: phoneStr, hasCountryCode: true)
         }
         else {
@@ -92,7 +96,7 @@ class SearchUI: NSViewController {
                 return true
             }
             else { //search includes date parameters
-                if dateFromString(dateStr: message.date).isBetween(fromDate.dateValue, and: toDate.dateValue) {
+                if dateFromString(dateStr: message.date).isBetween(fromDate.dateValue, and: toDate.dateValue.addingTimeInterval(60 * 60 * 24)) {
                     results.append(MessageIDPair(message: message, id: idForSearch))
                     return true
                 }
@@ -113,7 +117,24 @@ class SearchUI: NSViewController {
         }
         var statement: OpaquePointer?
         var numHandles = 0
+        //TODO: maybe just always do this on the first search?? might be helpful for allowing groupchats to be included in individual search results
         if searchAllHandles && !haveSearchedAll { //searching through all messages
+            //need to do the group chats first so that info about who is in each group chat will be available for single person search
+            if sqlite3_prepare_v2(db, "select distinct chat_identifier from chat where chat_identifier like 'chat%'", -1, &statement, nil) != SQLITE_OK {
+                let errmsg = String(cString: sqlite3_errmsg(db)!)
+                print("error preparing select: \(errmsg)")
+            }
+            while sqlite3_step(statement) == SQLITE_ROW {
+                var handleID = ""
+                if let cHandleID = sqlite3_column_text(statement, 0) {
+                    handleID = String(cString: cHandleID)
+                }
+                //print(handleID)
+                handleIDs.append(handleID)
+                handleIDDict[handleID] = numHandles
+                numHandles += 1
+            }
+            statement = nil
             if sqlite3_prepare_v2(db, "select distinct id from handle", -1, &statement, nil) != SQLITE_OK {
                 let errmsg = String(cString: sqlite3_errmsg(db)!)
                 print("error preparing select: \(errmsg)")
@@ -127,6 +148,7 @@ class SearchUI: NSViewController {
                 handleIDDict[handleID] = numHandles
                 numHandles += 1
             }
+            statement = nil
         }
         if !searchAllHandles {
             numHandles = 1
@@ -139,22 +161,37 @@ class SearchUI: NSViewController {
         for handleIdx in 0..<numHandles {
             var idForSearch = ""
             //clear currentPerson
-            var currentPerson = [Message]()
+            var currentPerson = [Message]() //[[Message]]()
             var numPossibleChatIDs = 0
             var phoneNumsAndEmails = [String]()
             var thisPhone = ""
+            var contactIDSet = Set<String>()
             if searchByContact && !searchAllHandles { //search by contact
                 let contact = contactsDict[contactName.titleOfSelectedItem!]
-                //TODO: make sure there aren't duplicate phone numbers or emails
+                //TODO: was i gonna do something with this idForSearch?
                 numPossibleChatIDs += (contact?.emailAddresses.count)!
                 numPossibleChatIDs += (contact?.phoneNumbers.count)!
                 for phoneNum in (contact?.phoneNumbers)! {
-                    phoneNumsAndEmails.append(formatAnyPhoneNumber(phoneNum: phoneNum))
-                    idForSearch += (phoneNumsAndEmails.last! + ",")
+                    let phoneStr = formatAnyPhoneNumber(phoneNum: phoneNum)
+                    if contactIDSet.contains(phoneStr) {
+                        numPossibleChatIDs -= 1
+                    }
+                    else {
+                        phoneNumsAndEmails.append(phoneStr)
+                        idForSearch += (phoneStr + ",")
+                        contactIDSet.insert(phoneStr)
+                    }
                 }
                 for email in (contact?.emailAddresses)! {
-                    phoneNumsAndEmails.append(email.value as String)
-                    idForSearch += (email.value as String + ",")
+                    let emailStr = email.value as String
+                    if contactIDSet.contains(emailStr) {
+                        numPossibleChatIDs -= 1
+                    }
+                    else {
+                        phoneNumsAndEmails.append(emailStr)
+                        idForSearch += (emailStr + ",")
+                        contactIDSet.insert(emailStr)
+                    }
                 }
             }
             else { //search by phone number
@@ -166,7 +203,7 @@ class SearchUI: NSViewController {
                 }
                 idForSearch = thisPhone
             }
-            if !haveSearchedAll || !searchAllHandles { //in the future change this to allow reuse of the people array no matter if you're searching for all, contact,  or phone number
+            if !haveSearchedAll || (searchByContact && !searchAllHandles) { //TODO: is there an efficient way to reuse cached data for searching by contact?
                 var onePersQuery = "select chat.guid, message.text, message.date, message.is_from_me, message.ROWID as row from chat_message_join inner join chat on chat.ROWID = chat_message_join.chat_id inner join message on message.ROWID = chat_message_join.message_id and message.date = chat_message_join.message_date where chat.ROWID in ( select chat.ROWID from chat_handle_join inner join chat on chat.ROWID = chat_handle_join.chat_id inner join handle on handle.ROWID = chat_handle_join.handle_id where chat.chat_identifier = handle.id and handle.id in (?"
                 if searchByContact && !searchAllHandles { //search by contact
                     if numPossibleChatIDs == 0 {
@@ -179,6 +216,10 @@ class SearchUI: NSViewController {
                     }
                 }
                 onePersQuery += ")) order by message.date"
+                let isGroupChat = idForSearch.hasPrefix("chat")
+                if searchAllHandles && isGroupChat { //searching in a group chat
+                    onePersQuery = "select guid, text, date, is_from_me, msg_row, display_name, id from (select handle.id, chat.guid, chat.room_name, chat.display_name, message.text, message.date, message.is_from_me, message.handle_id, message.ROWID as msg_row, handle.ROWID as handle_row from chat_message_join inner join chat on chat.ROWID = chat_message_join.chat_id inner join message on message.ROWID = chat_message_join.message_id and message.date = chat_message_join.message_date inner join chat_handle_join on chat.ROWID = chat_handle_join.chat_id inner join handle on handle.ROWID = chat_handle_join.handle_id where chat.chat_identifier != handle.id and chat.room_name = ? order by message.date) where handle_id = handle_row or is_from_me = 1 group by guid, room_name, text, date, is_from_me, msg_row order by date"
+                }
                 if sqlite3_prepare_v2(db, onePersQuery, -1, &statement, nil) != SQLITE_OK {
                     let errmsg = String(cString: sqlite3_errmsg(db)!)
                     print("error preparing select: \(errmsg)")
@@ -197,12 +238,13 @@ class SearchUI: NSViewController {
                         idForSearch.remove(at: idForSearch.index(before: idForSearch.endIndex))
                     }
                 }
-                else { //search by phone number
+                else { //search by phone number or group chat id
                     if sqlite3_bind_text(statement, 1, thisPhone, -1, SQLITE_TRANSIENT) != SQLITE_OK {
                         let errmsg = String(cString: sqlite3_errmsg(db)!)
                         print("failure binding phone number: \(errmsg)")
                     }
                 }
+                var handlesInGroup = Set<String>()
                 var idx = 0
                 while sqlite3_step(statement) == SQLITE_ROW {
                     var text = ""
@@ -213,19 +255,66 @@ class SearchUI: NSViewController {
                     let strDate = formatDate(date: date)
                     let is_from_me = sqlite3_column_int64(statement, 3)
                     //let self_row = sqlite3_column_int64(statement, 4)
-                    currentPerson.append(Message(idx: Int64(idx), text: text, is_from_me: is_from_me, date: strDate))
+                    if isGroupChat && searchAllHandles {//not sure if checking for searchAllHandles is necessary
+                        var displayName = ""
+                        if let cDisplayName = sqlite3_column_text(statement, 5) {
+                            displayName = String(cString: cDisplayName)
+                        }
+                        var handle = ""
+                        if let cHandle = sqlite3_column_text(statement, 6) {
+                            handle = String(cString: cHandle)
+                        }
+                        if !handlesInGroup.contains(handle) {
+                            print("handle inserted: \(handle)")
+                            handlesInGroup.insert(handle)
+                            if handleGCsDict[handle] == nil {
+                                handleGCsDict[handle] = [idForSearch]
+                            }
+                            else {
+                                handleGCsDict[handle]?.append(idForSearch)
+                            }
+                        }
+                        print(displayName + " " + handle)
+                        currentPerson.append(Message(idx: Int64(idx), text: text, is_from_me: is_from_me, date: strDate, handle: handle, displayName: displayName))
+                    }
+                    else {
+                        currentPerson.append(Message(idx: Int64(idx), text: text, is_from_me: is_from_me, date: strDate))
+                    }
                     idx += 1
                 }
             //here is where the numberedperson stops
-                if searchAllHandles && haveSearchedAll {
-                    idForSearch = handleIDs[handleIdx]
-                }
-                if !searchAllHandles {
+//                if searchAllHandles && haveSearchedAll {
+//                    idForSearch = handleIDs[handleIdx]
+//                }
+                if !searchAllHandles { //either searching for contact or phone number, have not yet done a searchall
                     contactOrPhonePerson = Messages(messages: currentPerson, id: idForSearch)
                 }
                 if searchAllHandles  && !haveSearchedAll{
+                    if isGroupChat {
+                        gcIDHandlesDict[idForSearch] = Array(handlesInGroup)
+                    }
                     people.append(Messages(messages: currentPerson, id: idForSearch))
                 }
+            }
+                //behold, the remains of an attempt to use cached data to search by contact, but alas, it is very very slow (probably because of the sorting?)
+//            else if !searchAllHandles && searchByContact { //searching by contact **everything here means we have done a searchall once***
+//                currentPerson = [Message]()
+//                for contactID in contactIDSet {
+//                    if handleIDDict[contactID] != nil {
+//                        currentPerson.append(contentsOf: people[handleIDDict[contactID]!].messages)
+//                    }
+//                }
+//                currentPerson.sort {
+//                    dateFormatter.dateFormat = "MM/dd/yy, h:mm:ss a"
+//                    let date0 = dateFormatter.date(from: $0.date)!
+//                    let date1 = dateFormatter.date(from: $1.date)!
+//                    return date0 < date1
+//                }
+//                contactOrPhonePerson = Messages(messages: currentPerson, id: idForSearch)
+//            }
+            else if !searchAllHandles { //currently means that we are searching by phone number
+                currentPerson = people[handleIDDict[idForSearch]!].messages
+                contactOrPhonePerson = Messages(messages: currentPerson, id: idForSearch)
             }
             else { //searchall has happened so use the value that's already there
                 currentPerson = people[handleIdx].messages
@@ -340,6 +429,7 @@ class SearchUI: NSViewController {
                 resultsTab?.currentPerson = contactOrPhonePerson
                 //}
                 resultsTab?.haveSearchedAll = self.haveSearchedAll
+                resultsTab?.gcIDHandlesDict = self.gcIDHandlesDict
             }
         }
         else {

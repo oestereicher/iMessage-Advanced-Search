@@ -46,7 +46,22 @@ struct Message {
     var text: String
     var is_from_me: Bool?
     var date: String
+    var handle: String?
+    var displayName: String?
     
+    init(idx: Int64, text: String, is_from_me: Int64, date: String, handle: String, displayName: String) {
+        self.idx = idx
+        self.text = text
+        self.is_from_me = (is_from_me == 1)
+        self.date = date
+        self.handle = handle
+        if !displayName.isEmpty {
+            self.displayName = displayName
+        }
+        else {
+            self.displayName = "Group chat"
+        }
+    }
     init(idx: Int64, text: String, is_from_me: Int64, date: String) {
         self.idx = idx
         self.text = text
