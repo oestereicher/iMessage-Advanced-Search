@@ -244,6 +244,8 @@ class ViewController: NSViewController {
                     if let cHandle = sqlite3_column_text(statement, 1) {
                         handle = String(cString: cHandle)
                     }
+                    //TODO: currently I find out who is in each group chat by going through all the messages and adding someone to the set if they have sent a message... its possible that there is a better way of doing this
+                    //for example I think that each message has a version tagged with each member's handle... find a way to use that instead
                     if !handle.isEmpty{
                         if !handlesInGroup.contains(handle) {
                             print("handle inserted: \(handle)")

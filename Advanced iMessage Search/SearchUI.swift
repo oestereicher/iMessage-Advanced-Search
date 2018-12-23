@@ -320,38 +320,71 @@ class SearchUI: NSViewController {
                 self.results = [MessageIDPair]()
             }
                 //print("HEYO THIS IS THE SEARCHOPTS" + String(searchOpts.titleOfSelectedItem))
+            if search.isEmpty { //can only be true if there are date parameters included
+                
+            }
             switch(searchOpts.titleOfSelectedItem) {
             case self.opts[0]:
                 for message in currentPerson {
-                    if appendToResultsIf(cond: message.text.lowercased().range(of: search) != nil, message: message, idForSearch: idForSearch) {
+                    if search.isEmpty { //if search is empty, this means that there must be a date parameter and we only want to return the first result in that date range
+                        if appendToResultsIf(cond: true, message: message, idForSearch: idForSearch) {
+                            resultsIdx += 1
+                            break
+                        }
+                    }
+                    else if appendToResultsIf(cond: message.text.lowercased().range(of: search) != nil, message: message, idForSearch: idForSearch) {
                         resultsIdx += 1
                     }
                 }
                 break
             case self.opts[1]:
                 for message in currentPerson {
-                    if appendToResultsIf(cond: message.text.lowercased().hasPrefix(search), message: message, idForSearch: idForSearch) {
+                    if search.isEmpty {
+                        if appendToResultsIf(cond: true, message: message, idForSearch: idForSearch) {
+                            resultsIdx += 1
+                            break
+                        }
+                    }
+                    else if appendToResultsIf(cond: message.text.lowercased().hasPrefix(search), message: message, idForSearch: idForSearch) {
                         resultsIdx += 1
                     }
                 }
                 break
             case self.opts[2]:
                 for message in currentPerson {
-                    if appendToResultsIf(cond: message.text.lowercased().hasSuffix(search), message: message, idForSearch: idForSearch) {
+                    if search.isEmpty {
+                        if appendToResultsIf(cond: true, message: message, idForSearch: idForSearch) {
+                            resultsIdx += 1
+                            break
+                        }
+                    }
+                    else if appendToResultsIf(cond: message.text.lowercased().hasSuffix(search), message: message, idForSearch: idForSearch) {
                         resultsIdx += 1
                     }
                 }
                 break
             case self.opts[3]:
                 for message in currentPerson {
-                    if appendToResultsIf(cond: message.text.lowercased() == search, message: message, idForSearch: idForSearch) {
+                    if search.isEmpty {
+                        if appendToResultsIf(cond: true, message: message, idForSearch: idForSearch) {
+                            resultsIdx += 1
+                            break
+                        }
+                    }
+                    else if appendToResultsIf(cond: message.text.lowercased() == search, message: message, idForSearch: idForSearch) {
                         resultsIdx += 1
                     }
                 }
                 break
             case self.opts[4]:
                 for message in currentPerson {
-                    if appendToResultsIf(cond: message.text.lowercased().range(of: search, options: .regularExpression, range: nil, locale: nil) != nil, message: message, idForSearch: idForSearch) {
+                    if search.isEmpty {
+                        if appendToResultsIf(cond: true, message: message, idForSearch: idForSearch) {
+                            resultsIdx += 1
+                            break
+                        }
+                    }
+                    else if appendToResultsIf(cond: message.text.lowercased().range(of: search, options: .regularExpression, range: nil, locale: nil) != nil, message: message, idForSearch: idForSearch) {
                         resultsIdx += 1
                     }
                 }
@@ -396,6 +429,11 @@ class SearchUI: NSViewController {
                 else {
                     var dateMessage = ""
                     if anyDate.state == .off {
+                        dateFormatter.dateFormat = "MM/dd/YYYY"
+                        //dateFormatter.timeStyle = DateFormatter.Style.none
+                        fromDateStr = dateFormatter.string(from: fromDate.dateValue)
+                        toDateStr = dateFormatter.string(from: toDate.dateValue)
+                        print("fromDatestr: \(fromDateStr), toDateStr: \(toDateStr)")
                         if fromDateStr == toDateStr {
                             dateMessage = "on \(fromDateStr) "
                         }
