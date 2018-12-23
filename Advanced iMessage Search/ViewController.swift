@@ -7,7 +7,7 @@
 //
 
 import Cocoa
-//import SQLite3
+import SQLite3
 import Contacts
 
 class ViewController: NSViewController {
@@ -16,12 +16,44 @@ class ViewController: NSViewController {
     private var searchUI: SearchUI?
     public var store: CNContactStore!
     public var contacts = [CNContact]()
+    public var gcIDHandlesDict = [String: [String]]() //chat* id --> handles in the chat
+    public var handleGCsDict = [String: [String]]() //handle --> chat* ids its part of
+    public var gcDisplayNames = [String]()
+    public var displayNameGCDict = [String: String]()
+    //need to pass below items down to the searchcontainer
+    public var contactsDict = [String: CNContact]()
+    public var contactNames = [String]()
+    public var gcIDs = [String]()
+    public var gcIDDict = [String: Int]()
     
+    internal let SQLITE_STATIC = unsafeBitCast(0, to: sqlite3_destructor_type.self)
+    internal let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
     @IBOutlet weak var pathName: NSTextField!
     @IBOutlet weak var message: NSTextField!
     @IBAction func pathEnter(_ sender: Any) {
         sayButtonClicked(self)
+    }
+    private func formatPhoneNumber(num: String, hasCountryCode: Bool) -> String {
+        if hasCountryCode {
+            return num.replacingOccurrences( of:"[^0-9+]", with: "", options: .regularExpression)
+        }
+        else {
+            //TODO: this assumes that phone numbers not including country code are in the US. probably add an option somewhere so this can be chosen
+            return ("+1" + num).replacingOccurrences( of:"[^0-9+]", with: "", options: .regularExpression)
+        }
+    }
+    private func formatAnyPhoneNumber(phoneNum: CNLabeledValue<CNPhoneNumber>) -> String {
+        let phoneStr = phoneNum.value.stringValue
+        var formattedNum = ""
+        //assumes that there is a country code in the number if there are more than 10 digits or if it begins with a +
+        if phoneStr.replacingOccurrences( of:"[^0-9]", with: "", options: .regularExpression).count > 10 || phoneStr[phoneStr.startIndex] == "+" {
+            formattedNum = formatPhoneNumber(num: phoneStr, hasCountryCode: true)
+        }
+        else {
+            formattedNum = formatPhoneNumber(num: phoneStr, hasCountryCode: false)
+        }
+        return formattedNum
     }
     
     @IBAction func sayButtonClicked(_ sender: Any) {
@@ -87,6 +119,26 @@ class ViewController: NSViewController {
                 return $0.familyName < $1.familyName
             }
         })
+        
+        for contact in self.contacts {
+            if !(contact.givenName.isEmpty && contact.familyName.isEmpty) {
+                let fullName = contact.givenName + " " + contact.familyName
+                contactNames.append(fullName)
+                contactsDict[fullName] = contact
+            }
+            for email in contact.emailAddresses {
+                let emailStr = email.value as String
+                if contactsDict[emailStr] == nil {
+                    contactsDict[email.value as String] = contact
+                }
+            }
+            for phoneNum in contact.phoneNumbers {
+                let phoneStr = formatAnyPhoneNumber(phoneNum: phoneNum)
+                if contactsDict[phoneStr] == nil {
+                    contactsDict[phoneStr] = contact
+                }
+            }
+        }
 //        for contact in contacts {
 //            print(contact.givenName)
 //        }
@@ -148,12 +200,101 @@ class ViewController: NSViewController {
 //            if sqlite3_close(db) != SQLITE_OK {
 //                print("error closing database")
 //            }
+            var db: OpaquePointer?
+            if sqlite3_open(self.fullPath, &db) != SQLITE_OK {
+                print("error opening database")
+            }
+            var statement: OpaquePointer?
+            var numGCs = 0
+            if sqlite3_prepare_v2(db, "select distinct chat_identifier from chat where chat_identifier like 'chat%'", -1, &statement, nil) != SQLITE_OK {
+                let errmsg = String(cString: sqlite3_errmsg(db)!)
+                print("error preparing select: \(errmsg)")
+            }
+            while sqlite3_step(statement) == SQLITE_ROW {
+                var gcID = ""
+                if let cGCID = sqlite3_column_text(statement, 0) {
+                    gcID = String(cString: cGCID)
+                }
+                gcIDs.append(gcID)
+                gcIDDict[gcID] = numGCs
+                numGCs += 1
+                print("is there a gcID here? \(gcID)")
+            }
+            for gcID in gcIDs {
+                print("here we have a group chat: \(gcID)")
+                if sqlite3_prepare_v2(db, "select display_name, id from (select handle.id, chat.guid, chat.room_name, chat.display_name, message.text, message.date, message.is_from_me, message.handle_id, message.ROWID as msg_row, handle.ROWID as handle_row from chat_message_join inner join chat on chat.ROWID = chat_message_join.chat_id inner join message on message.ROWID = chat_message_join.message_id and message.date = chat_message_join.message_date inner join chat_handle_join on chat.ROWID = chat_handle_join.chat_id inner join handle on handle.ROWID = chat_handle_join.handle_id where chat.chat_identifier != handle.id and chat.room_name = ? order by message.date) where handle_id = handle_row or is_from_me = 1 group by guid, room_name, text, date, is_from_me, msg_row order by date", -1, &statement, nil) != SQLITE_OK {
+                    let errmsg = String(cString: sqlite3_errmsg(db)!)
+                    print("error preparing select: \(errmsg)")
+                }
+                if sqlite3_bind_text(statement, 1, gcID, -1, SQLITE_TRANSIENT) != SQLITE_OK {
+                    let errmsg = String(cString: sqlite3_errmsg(db)!)
+                    print("failure binding group chat id: \(errmsg)")
+                }
+                var handlesInGroup = Set<String>()
+                var displayName = ""
+                var firstRow = true
+                while sqlite3_step(statement) == SQLITE_ROW {
+                    if firstRow {
+                        if let cDisplayName = sqlite3_column_text(statement, 0) {
+                            displayName = String(cString: cDisplayName)
+                        }
+                        firstRow = false
+                    }
+                    var handle = ""
+                    if let cHandle = sqlite3_column_text(statement, 1) {
+                        handle = String(cString: cHandle)
+                    }
+                    if !handle.isEmpty{
+                        if !handlesInGroup.contains(handle) {
+                            print("handle inserted: \(handle)")
+                            handlesInGroup.insert(handle)
+                            if handleGCsDict[handle] == nil {
+                                handleGCsDict[handle] = [gcID]
+                            }
+                            else {
+                                handleGCsDict[handle]?.append(gcID)
+                            }
+                        }
+                    }
+                }
+                if handlesInGroup.count > 0 {
+                    var gcName = ""
+                    if !displayName.isEmpty {
+                        gcName = displayName
+                    }
+                    else {
+                        for handle in handlesInGroup {
+                            let contact = contactsDict[handle]
+                            if contact == nil {
+                                gcName += (handle + ", ")
+                            }
+                            else {
+                                gcName += (determineContactName(contact: contact!) + ", ")
+                            }
+                        }
+                        gcName.removeLast(2)
+                    }
+                    gcDisplayNames.append(gcName)
+                    displayNameGCDict[gcName] = gcID
+                    gcIDHandlesDict[gcID] = Array(handlesInGroup)
+                }
+            }
+            gcDisplayNames.sort()
+            print(gcDisplayNames)
             
             let storyBoard : NSStoryboard = NSStoryboard(name: "Main", bundle:nil)
             
             let searchContainer = storyBoard.instantiateController(withIdentifier: "SearchContainer") as! SearchContainer
             searchContainer.fullPath = self.fullPath
             searchContainer.contacts = self.contacts
+            searchContainer.gcIDHandlesDict = self.gcIDHandlesDict
+            searchContainer.handleGCsDict = self.handleGCsDict
+            searchContainer.gcDisplayNames = self.gcDisplayNames
+            searchContainer.displayNameGCDict = self.displayNameGCDict
+            searchContainer.contactsDict = self.contactsDict
+            searchContainer.contactNames = self.contactNames
+            searchContainer.gcIDs = self.gcIDs
+            searchContainer.gcIDDict = self.gcIDDict
             self.presentAsModalWindow(searchContainer)
         }
         else {

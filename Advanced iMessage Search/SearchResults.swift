@@ -9,6 +9,15 @@
 import Cocoa
 import Contacts
 
+func determineContactName(contact: CNContact) -> String {
+    if !contact.nickname.isEmpty {
+        return contact.nickname
+    }
+    else {
+        return contact.givenName + " " + contact.familyName
+    }
+}
+
 class SearchResults: NSViewController {
 
     @IBOutlet weak var tableView: NSTableView!
@@ -74,14 +83,7 @@ class SearchResults: NSViewController {
         return height
     }
     
-    func determineContactName(contact: CNContact) -> String {
-        if !contact.nickname.isEmpty {
-            return contact.nickname
-        }
-        else {
-            return contact.givenName + " " + contact.familyName
-        }
-    }
+    
     
     func updateStatus() {
         //print(offset)

@@ -14,6 +14,7 @@ class SearchUI: NSViewController {
     
     public var fullPath = ""
     private let opts = ["Contains", "Starts With", "Ends With", "Exactly", "Regex"]
+    private let searchByOpts = ["Contact", "Phone Number", "Group Chat"]
     public var results = [MessageIDPair]()
     public var resultsTab: SearchResults?
     public var people = [Messages]()
@@ -22,14 +23,17 @@ class SearchUI: NSViewController {
     private var toDateStr = ""
     public var contacts = [CNContact]()
     public var contactsDict = [String: CNContact]()
+    public var contactNames = [String]()
     let dateFormatter = DateFormatter()
     public var handleIDs = [String]()
     public var handleIDDict = [String: Int]()
-    //we want to be able to get all the gcIDs that each handle is associated with
-    //so I should be able to put in a handle and get a list of gcIDs
+    public var gcIDs = [String]()
     public var gcIDHandlesDict = [String: [String]]() //chat* id --> handles in the chat
     public var handleGCsDict = [String: [String]]() //handle --> chat* ids its part of
+    public var gcDisplayNames = [String]()
+    public var displayNameGCDict = [String: String]()
     private var searchByContact = true
+    private var searchByGC = false
     public var searchAllHandles = false
     public var haveSearchedAll = false
     
@@ -37,6 +41,7 @@ class SearchUI: NSViewController {
     internal let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
     
+    @IBOutlet weak var gcSelection: NSPopUpButton!
     @IBOutlet weak var searchAll: NSButton!
     @IBOutlet weak var searchBy: NSPopUpButtonCell!
     @IBOutlet weak var contactName: NSPopUpButton!
@@ -62,6 +67,7 @@ class SearchUI: NSViewController {
             return num.replacingOccurrences( of:"[^0-9+]", with: "", options: .regularExpression)
         }
         else {
+            //TODO: note somewhere that country selection can affect contact searches
             return (countries.titleOfSelectedItem! + num).replacingOccurrences( of:"[^0-9+]", with: "", options: .regularExpression)
         }
     }
@@ -105,6 +111,7 @@ class SearchUI: NSViewController {
         return false
     }
     private func searchDB(phone: String, search: String) -> Int {
+        print(handleIDs)
         searchAllHandles = searchAll.state == .on
         //Search must include some restriction (date or text)
         if search.isEmpty && anyDate.state == .on {
@@ -116,25 +123,9 @@ class SearchUI: NSViewController {
             print("error opening database")
         }
         var statement: OpaquePointer?
-        var numHandles = 0
+        var numHandles = handleIDs.count
         //TODO: maybe just always do this on the first search?? might be helpful for allowing groupchats to be included in individual search results
         if searchAllHandles && !haveSearchedAll { //searching through all messages
-            //need to do the group chats first so that info about who is in each group chat will be available for single person search
-            if sqlite3_prepare_v2(db, "select distinct chat_identifier from chat where chat_identifier like 'chat%'", -1, &statement, nil) != SQLITE_OK {
-                let errmsg = String(cString: sqlite3_errmsg(db)!)
-                print("error preparing select: \(errmsg)")
-            }
-            while sqlite3_step(statement) == SQLITE_ROW {
-                var handleID = ""
-                if let cHandleID = sqlite3_column_text(statement, 0) {
-                    handleID = String(cString: cHandleID)
-                }
-                //print(handleID)
-                handleIDs.append(handleID)
-                handleIDDict[handleID] = numHandles
-                numHandles += 1
-            }
-            statement = nil
             if sqlite3_prepare_v2(db, "select distinct id from handle", -1, &statement, nil) != SQLITE_OK {
                 let errmsg = String(cString: sqlite3_errmsg(db)!)
                 print("error preparing select: \(errmsg)")
@@ -198,6 +189,10 @@ class SearchUI: NSViewController {
                 if searchAllHandles {
                     thisPhone = handleIDs[handleIdx]
                 }
+                else if searchByGC { //searching for an individual group chat
+                    thisPhone = displayNameGCDict[gcSelection.titleOfSelectedItem!]!
+                    print(thisPhone)
+                }
                 else {
                     thisPhone = phone
                 }
@@ -217,7 +212,7 @@ class SearchUI: NSViewController {
                 }
                 onePersQuery += ")) order by message.date"
                 let isGroupChat = idForSearch.hasPrefix("chat")
-                if searchAllHandles && isGroupChat { //searching in a group chat
+                if isGroupChat { //searching in a group chat
                     onePersQuery = "select guid, text, date, is_from_me, msg_row, display_name, id from (select handle.id, chat.guid, chat.room_name, chat.display_name, message.text, message.date, message.is_from_me, message.handle_id, message.ROWID as msg_row, handle.ROWID as handle_row from chat_message_join inner join chat on chat.ROWID = chat_message_join.chat_id inner join message on message.ROWID = chat_message_join.message_id and message.date = chat_message_join.message_date inner join chat_handle_join on chat.ROWID = chat_handle_join.chat_id inner join handle on handle.ROWID = chat_handle_join.handle_id where chat.chat_identifier != handle.id and chat.room_name = ? order by message.date) where handle_id = handle_row or is_from_me = 1 group by guid, room_name, text, date, is_from_me, msg_row order by date"
                 }
                 if sqlite3_prepare_v2(db, onePersQuery, -1, &statement, nil) != SQLITE_OK {
@@ -255,7 +250,7 @@ class SearchUI: NSViewController {
                     let strDate = formatDate(date: date)
                     let is_from_me = sqlite3_column_int64(statement, 3)
                     //let self_row = sqlite3_column_int64(statement, 4)
-                    if isGroupChat && searchAllHandles {//not sure if checking for searchAllHandles is necessary
+                    if isGroupChat {//not sure if checking for searchAllHandles is necessary
                         var displayName = ""
                         if let cDisplayName = sqlite3_column_text(statement, 5) {
                             displayName = String(cString: cDisplayName)
@@ -387,9 +382,10 @@ class SearchUI: NSViewController {
         var id = contactID.stringValue
         let search = searchText.stringValue.lowercased()
         searchByContact = searchBy.titleOfSelectedItem == "Contact"// && searchAll.state == .off
+        searchByGC = searchBy.titleOfSelectedItem == "Group Chat"
         if !self.fullPath.isEmpty {
             print(self.fullPath)
-            if !id.isEmpty || searchByContact {
+            if !id.isEmpty || searchByContact || searchByGC {
                 if isPhoneNumber(num: id) {
                     id = formatPhoneNumber(num: id, hasCountryCode: false)
                 }
@@ -409,6 +405,9 @@ class SearchUI: NSViewController {
                     }
                     if searchByContact {
                         id = contactName.titleOfSelectedItem!
+                    }
+                    if searchByGC {
+                        id = gcSelection.titleOfSelectedItem!
                     }
                     if searchAllHandles {
                         id = "all messages"
@@ -446,25 +445,11 @@ class SearchUI: NSViewController {
         countries.removeAllItems()
         countries.addItems(withTitles: countryToCode)
         contactName.removeAllItems()
-        for contact in self.contacts {
-            if !(contact.givenName.isEmpty && contact.familyName.isEmpty) {
-                let fullName = contact.givenName + " " + contact.familyName
-                contactName.addItem(withTitle: fullName)
-                contactsDict[fullName] = contact
-            }
-            for email in contact.emailAddresses {
-                let emailStr = email.value as String
-                if contactsDict[emailStr] == nil {
-                    contactsDict[email.value as String] = contact
-                }
-            }
-            for phoneNum in contact.phoneNumbers {
-                let phoneStr = formatAnyPhoneNumber(phoneNum: phoneNum)
-                if contactsDict[phoneStr] == nil {
-                    contactsDict[phoneStr] = contact
-                }
-            }
-        }
+        contactName.addItems(withTitles: contactNames)
+        searchBy.removeAllItems()
+        searchBy.addItems(withTitles: searchByOpts)
+        gcSelection.removeAllItems()
+        gcSelection.addItems(withTitles: gcDisplayNames)
         resultsTab?.contactsDict = self.contactsDict
     }
     

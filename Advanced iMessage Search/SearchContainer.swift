@@ -15,6 +15,14 @@ class SearchContainer: NSViewController {
     private var searchResults: SearchResults?
     public var fullPath = ""
     public var contacts = [CNContact]()
+    public var gcIDHandlesDict = [String: [String]]() //chat* id --> handles in the chat
+    public var handleGCsDict = [String: [String]]() //handle --> chat* ids its part of
+    public var gcDisplayNames = [String]()
+    public var displayNameGCDict = [String: String]()
+    public var contactsDict = [String: CNContact]()
+    public var contactNames = [String]()
+    public var gcIDs = [String]()
+    public var gcIDDict = [String: Int]()
     
     override func prepare(for segue: NSStoryboardSegue, sender: Any?) {
         guard let tabViewController = segue.destinationController
@@ -24,6 +32,14 @@ class SearchContainer: NSViewController {
                 searchUI = controller
                 searchUI?.fullPath = self.fullPath
                 searchUI?.contacts = self.contacts
+                searchUI?.gcIDHandlesDict = self.gcIDHandlesDict
+                searchUI?.handleGCsDict = self.handleGCsDict
+                searchUI?.gcDisplayNames = self.gcDisplayNames
+                searchUI?.displayNameGCDict = self.displayNameGCDict
+                searchUI?.contactsDict = self.contactsDict
+                searchUI?.contactNames = self.contactNames
+                searchUI?.handleIDs = self.gcIDs
+                searchUI?.handleIDDict = self.gcIDDict
             }
             if let controller = controller as? SearchResults {
                 searchResults = controller
