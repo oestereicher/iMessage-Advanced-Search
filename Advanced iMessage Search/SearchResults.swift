@@ -175,20 +175,20 @@ extension SearchResults: NSTableViewDelegate {
         }
         if currIdx < currentPerson.messages.count && currIdx != -1 {
             let currMessage = currentPerson.messages[currIdx]
-            let cellText = currMessage.text
-            cell.textField?.stringValue = ""
+            var cellText = currMessage.text
+            //cell.textField?.stringValue = ""
             if currMessage.handle != nil { //indicates that this message is part of a group chat
                 let contact = contactsDict[currMessage.handle!]
                 if !currMessage.is_from_me! {
                     if contact == nil {
-                        cell.textField?.stringValue += currMessage.handle! + "| "
+                        cellText = (currMessage.handle! + "| ") + cellText
                     }
                     else {
-                        cell.textField?.stringValue += determineContactName(contact: contact!) + "| "
+                        cellText = (determineContactName(contact: contact!) + "| ") + cellText
                     }
                 }
             }
-            cell.textField?.stringValue += cellText
+            cell.textField?.stringValue = cellText
             //                print("CURRENT INDEX: \(currIdx)")
             if cellHeightsAll.count > 1 && (!searchByContact || searchAllHandles) {
                 cellHeightsAll[handleIDDict[currentPerson.id]!][currIdx] = heightForCell(str: cellText)
