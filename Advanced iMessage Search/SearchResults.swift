@@ -96,6 +96,11 @@ class SearchResults: NSViewController {
             if searchAllHandles {
                 currentPerson = people[handleIDDict[results[selected].id]!]
             }
+            if messagesToShow[selected] == 1 {
+                for _ in 0..<2 {
+                    loadMessagesDown(self)
+                }
+            }
 //            print("OFFSET: \(offset)")
             messagesView.reloadData()
             let changedIndexes = IndexSet(integersIn: 0..<messagesView.numberOfRows)
@@ -125,7 +130,7 @@ class SearchResults: NSViewController {
             }
         }
         offset = [Int](repeating: -1, count: results.count)
-        messagesToShow = [Int](repeating: 20, count: results.count)
+        messagesToShow = [Int](repeating: 1, count: results.count)
         
         cellHeights = [Int](repeating: 20, count: currentPerson.messages.count)
         print(results.count)

@@ -222,7 +222,7 @@ class ViewController: NSViewController {
             }
             for gcID in gcIDs {
                 print("here we have a group chat: \(gcID)")
-                if sqlite3_prepare_v2(db, "select display_name, id from (select handle.id, chat.guid, chat.room_name, chat.display_name, message.text, message.date, message.is_from_me, message.handle_id, message.ROWID as msg_row, handle.ROWID as handle_row from chat_message_join inner join chat on chat.ROWID = chat_message_join.chat_id inner join message on message.ROWID = chat_message_join.message_id and message.date = chat_message_join.message_date inner join chat_handle_join on chat.ROWID = chat_handle_join.chat_id inner join handle on handle.ROWID = chat_handle_join.handle_id where chat.chat_identifier != handle.id and chat.room_name = ? order by message.date) where handle_id = handle_row or is_from_me = 1 group by guid, room_name, text, date, is_from_me, msg_row order by date", -1, &statement, nil) != SQLITE_OK {
+                if sqlite3_prepare_v2(db, "select distinct display_name, id from (select handle.id, chat.guid, chat.room_name, chat.display_name, message.text, message.date, message.is_from_me, message.handle_id, message.ROWID as msg_row, handle.ROWID as handle_row from chat_message_join inner join chat on chat.ROWID = chat_message_join.chat_id inner join message on message.ROWID = chat_message_join.message_id and message.date = chat_message_join.message_date inner join chat_handle_join on chat.ROWID = chat_handle_join.chat_id inner join handle on handle.ROWID = chat_handle_join.handle_id where chat.chat_identifier != handle.id and chat.room_name = ? order by message.date)", -1, &statement, nil) != SQLITE_OK {
                     let errmsg = String(cString: sqlite3_errmsg(db)!)
                     print("error preparing select: \(errmsg)")
                 }
@@ -244,8 +244,6 @@ class ViewController: NSViewController {
                     if let cHandle = sqlite3_column_text(statement, 1) {
                         handle = String(cString: cHandle)
                     }
-                    //TODO: currently I find out who is in each group chat by going through all the messages and adding someone to the set if they have sent a message... its possible that there is a better way of doing this
-                    //for example I think that each message has a version tagged with each member's handle... find a way to use that instead
                     if !handle.isEmpty{
                         if !handlesInGroup.contains(handle) {
                             print("handle inserted: \(handle)")
@@ -282,7 +280,7 @@ class ViewController: NSViewController {
                 }
             }
             gcDisplayNames.sort()
-            print(gcDisplayNames)
+//            print(gcDisplayNames)
             
             let storyBoard : NSStoryboard = NSStoryboard(name: "Main", bundle:nil)
             

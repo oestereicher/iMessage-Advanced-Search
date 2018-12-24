@@ -269,7 +269,7 @@ class SearchUI: NSViewController {
                                 handleGCsDict[handle]?.append(idForSearch)
                             }
                         }
-                        print(displayName + " " + handle)
+//                        disprint(playName + " " + handle)
                         currentPerson.append(Message(idx: Int64(idx), text: text, is_from_me: is_from_me, date: strDate, handle: handle, displayName: displayName))
                     }
                     else {
@@ -433,7 +433,7 @@ class SearchUI: NSViewController {
                         //dateFormatter.timeStyle = DateFormatter.Style.none
                         fromDateStr = dateFormatter.string(from: fromDate.dateValue)
                         toDateStr = dateFormatter.string(from: toDate.dateValue)
-                        print("fromDatestr: \(fromDateStr), toDateStr: \(toDateStr)")
+//                        print("fromDatestr: \(fromDateStr), toDateStr: \(toDateStr)")
                         if fromDateStr == toDateStr {
                             dateMessage = "on \(fromDateStr) "
                         }
