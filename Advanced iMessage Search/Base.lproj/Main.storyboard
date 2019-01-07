@@ -711,7 +711,7 @@
                         <subviews>
                             <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="jkr-FM-Zbr">
                                 <rect key="frame" x="359" y="65" width="83" height="32"/>
-                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <autoresizingMask key="autoresizingMask"/>
                                 <buttonCell key="cell" type="push" title="Submit" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="Tft-yl-52v">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -734,7 +734,7 @@
                                 <autoresizingMask key="autoresizingMask"/>
                                 <textFieldCell key="cell" id="MCz-Bf-U6l">
                                     <font key="font" metaFont="system"/>
-                                    <string key="title">First, you need to open Finder and copy ~/Library/Messages/chat.db to another folder (like your Desktop). When you have done this, enter the full path name below and press the button.</string>
+                                    <string key="title">First, you need to open Finder and copy ~/Library/Messages/chat.db to another folder (like your Desktop). When you have done this, enter the full path name below (or select the folder) and press the button.</string>
                                     <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
                                     <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                 </textFieldCell>
@@ -769,6 +769,17 @@
                                     <action selector="pathEnter:" target="XfG-lQ-9wD" id="Esh-bO-dyd"/>
                                 </connections>
                             </textField>
+                            <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="rZE-Kz-z8Z">
+                                <rect key="frame" x="34" y="95" width="120" height="32"/>
+                                <autoresizingMask key="autoresizingMask"/>
+                                <buttonCell key="cell" type="push" title="Choose Folder" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="SS5-mC-QQR">
+                                    <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                                    <font key="font" metaFont="system"/>
+                                </buttonCell>
+                                <connections>
+                                    <action selector="browseFile:" target="XfG-lQ-9wD" id="Tf1-gA-gVF"/>
+                                </connections>
+                            </button>
                         </subviews>
                     </view>
                     <connections>
@@ -1247,7 +1258,7 @@
                 </viewController>
                 <customObject id="1ue-TY-dat" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="571" y="692"/>
+            <point key="canvasLocation" x="646" y="683"/>
         </scene>
     </scenes>
     <resources>

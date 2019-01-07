@@ -55,6 +55,30 @@ class ViewController: NSViewController {
         }
         return formattedNum
     }
+    @IBAction func browseFile(_ sender: Any) {
+        let panel = NSOpenPanel()
+        panel.title = "Select the directory containing a copy of chat.db"
+        panel.showsResizeIndicator    = true
+        panel.showsHiddenFiles        = false
+        panel.canChooseDirectories    = true
+        panel.canCreateDirectories    = true
+        panel.allowsMultipleSelection = false
+        panel.canChooseFiles = false
+        
+        if panel.runModal() == NSApplication.ModalResponse.OK {
+            let result = panel.url // Pathname of the file
+            
+            if (result != nil) {
+                let path = result!.path
+                pathName.stringValue = path
+                sayButtonClicked(self)
+            }
+        }
+        else {
+            //User clicked on "Cancel"
+            return
+        }
+    }
     
     @IBAction func sayButtonClicked(_ sender: Any) {
         //store = CNContactStore()
