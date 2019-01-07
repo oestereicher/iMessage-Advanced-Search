@@ -199,7 +199,7 @@ class SearchUI: NSViewController {
                 idForSearch = thisPhone
             }
             if !haveSearchedAll || (searchByContact && !searchAllHandles) { //TODO: is there an efficient way to reuse cached data for searching by contact?
-                var onePersQuery = "select chat.guid, message.text, message.date, message.is_from_me, message.ROWID as row from chat_message_join inner join chat on chat.ROWID = chat_message_join.chat_id inner join message on message.ROWID = chat_message_join.message_id and message.date = chat_message_join.message_date where chat.ROWID in ( select chat.ROWID from chat_handle_join inner join chat on chat.ROWID = chat_handle_join.chat_id inner join handle on handle.ROWID = chat_handle_join.handle_id where chat.chat_identifier = handle.id and handle.id in (?"
+                var onePersQuery = "select chat.guid, message.text, message.date, message.is_from_me, case cache_has_attachments when 0 then null when 1 then filename end as attachment from message inner join chat_message_join on message.ROWID = chat_message_join.message_id and message.date = chat_message_join.message_date inner join chat on chat.ROWID = chat_message_join.chat_id inner join chat_handle_join on chat.ROWID = chat_handle_join.chat_id inner join handle on handle.ROWID = chat_handle_join.handle_id left join message_attachment_join on message_attachment_join.message_id = message.ROWID left join attachment on attachment.ROWID = message_attachment_join.attachment_id where chat.ROWID in ( select chat.ROWID from chat_handle_join inner join chat on chat.ROWID = chat_handle_join.chat_id inner join handle on handle.ROWID = chat_handle_join.handle_id where chat.chat_identifier = handle.id and handle.id in (?"
                 if searchByContact && !searchAllHandles { //search by contact
                     if numPossibleChatIDs == 0 {
                         return 0
@@ -213,7 +213,7 @@ class SearchUI: NSViewController {
                 onePersQuery += ")) order by message.date"
                 let isGroupChat = idForSearch.hasPrefix("chat")
                 if isGroupChat { //searching in a group chat
-                    onePersQuery = "select guid, text, date, is_from_me, msg_row, display_name, id from (select handle.id, chat.guid, chat.room_name, chat.display_name, message.text, message.date, message.is_from_me, message.handle_id, message.ROWID as msg_row, handle.ROWID as handle_row from chat_message_join inner join chat on chat.ROWID = chat_message_join.chat_id inner join message on message.ROWID = chat_message_join.message_id and message.date = chat_message_join.message_date inner join chat_handle_join on chat.ROWID = chat_handle_join.chat_id inner join handle on handle.ROWID = chat_handle_join.handle_id where chat.chat_identifier != handle.id and chat.room_name = ? order by message.date) where handle_id = handle_row or is_from_me = 1 group by guid, room_name, text, date, is_from_me, msg_row order by date"
+                    onePersQuery = "select guid, text, date, is_from_me, case cache_has_attachments when 0 then null when 1 then filename end as attachment, display_name, id from (select handle.id, chat.guid, chat.room_name, chat.display_name, message.text, message.date, message.is_from_me, message.handle_id, message.ROWID as msg_row, handle.ROWID as handle_row, cache_has_attachments, filename from message inner join chat_message_join on message.ROWID = chat_message_join.message_id and message.date = chat_message_join.message_date inner join chat on chat.ROWID = chat_message_join.chat_id inner join chat_handle_join on chat.ROWID = chat_handle_join.chat_id inner join handle on handle.ROWID = chat_handle_join.handle_id left join message_attachment_join on message_attachment_join.message_id = message.ROWID left join attachment on attachment.ROWID = message_attachment_join.attachment_id where chat.chat_identifier != handle.id and chat.room_name = ? order by message.date) where handle_id = handle_row or is_from_me = 1 group by guid, room_name, text, date, is_from_me, msg_row order by date"
                 }
                 if sqlite3_prepare_v2(db, onePersQuery, -1, &statement, nil) != SQLITE_OK {
                     let errmsg = String(cString: sqlite3_errmsg(db)!)
@@ -250,6 +250,12 @@ class SearchUI: NSViewController {
                     let strDate = formatDate(date: date)
                     let is_from_me = sqlite3_column_int64(statement, 3)
                     //let self_row = sqlite3_column_int64(statement, 4)
+                    var attach = ""
+                    if let cAttach = sqlite3_column_text(statement, 4) {
+                        attach = String(cString: cAttach)
+                    }
+                    //(maybe just for now) add attachment path to the beginning of the text
+                    text = "\(attach) \(text)"
                     if isGroupChat {//not sure if checking for searchAllHandles is necessary
                         var displayName = ""
                         if let cDisplayName = sqlite3_column_text(statement, 5) {

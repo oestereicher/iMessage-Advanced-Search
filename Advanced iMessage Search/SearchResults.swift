@@ -30,6 +30,7 @@ class SearchResults: NSViewController {
     private var offset = [Int]()
     private var messagesToShow = [Int]()
     private var selected: Int = -1
+    private var selectedMsg = -1
     var tableViewCellForSizing: NSTableCellView?
     let cellIdentifier2: String = "MessageID"
     private var cellHeights = [Int]()
@@ -39,6 +40,8 @@ class SearchResults: NSViewController {
     public var contactsDict = [String: CNContact]()
     public var haveSearchedAll = false
     public var gcIDHandlesDict = [String: [String]]()
+    private var attachmentPath = ""
+    private var fileExtensions = "amr|cpp|css|cs|c|docx|doc|gif|heic|ico|jpg|jpeg|js|m4v|mov|mp3|mp4|pdf|php|png|pptx|ppt|py|swift|tar\\.gz|ts|txt|xls|zip"
     func loadMore(amt: Int) {
         if selected >= 0 && selected < results.count {
             messagesToShow[selected] += amt
@@ -282,7 +285,38 @@ extension SearchResults: NSTableViewDelegate {
         return nil
     }
     func tableViewSelectionDidChange(_ notification: Notification) {
-        if (tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier("MessageID"), owner: nil) != nil) {
+        print("hmmmmmm \(messagesView.selectedRow)")
+        if (messagesView.selectedRow != selectedMsg && messagesView.selectedRow != -1) {
+            selectedMsg = messagesView.selectedRow
+//            print("THIS IS THE MSGSEL \(selectedMsg) and me offset is \(offset[selected])")
+//            print("the message at offset + selectedMsg is \(currentPerson.messages[selectedMsg + offset[selected]].text)")
+            let msgText = currentPerson.messages[selectedMsg + offset[selected]].text
+            if msgText.range(of: "~/Library/Messages/Attachments") != nil {
+                if msgText.range(of: "pluginPayloadAttachment") != nil {
+                    attachmentPath = String(msgText[msgText.range(of: "http[^\\s]*(\\s|$)", options: .regularExpression, range: nil, locale: nil)!])
+                    if !NSWorkspace.shared.open(URL(string: attachmentPath)!) {
+                        print("failed to open link")
+                    }
+                }
+                else {
+                    let attachmentRange = msgText.range(of: "~\\/Library\\/Messages\\/Attachments/.*\\.(\(fileExtensions)|\(fileExtensions.uppercased()))\\b", options: .regularExpression, range: nil, locale: nil)
+                    if attachmentRange != nil {
+                        attachmentPath = String(msgText[attachmentRange!]).replacingOccurrences(of: "\n", with: "")
+                    }
+                    else {
+                        attachmentPath = String(msgText[msgText.range(of: "~\\/Library\\/Messages\\/Attachments\\/.*\\ ", options: .regularExpression, range: nil, locale: nil)!])
+                        attachmentPath.removeLast()
+                    }
+                    attachmentPath.remove(at: attachmentPath.startIndex)
+                    attachmentPath = FileManager.default.homeDirectoryForCurrentUser.path + attachmentPath
+                    if !NSWorkspace.shared.openFile(attachmentPath) {
+                        print("failed to open file")
+                    }
+                }
+                print("da attachment \(attachmentPath)")
+            }
+            
+            attachmentPath = ""
             return
         }
         updateStatus()
