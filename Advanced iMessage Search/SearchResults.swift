@@ -140,6 +140,48 @@ class SearchResults: NSViewController {
         tableView.reloadData()
         //maybe:
         messagesView.reloadData()
+        var currID = ""
+        if currentPerson.id.hasPrefix("chat") { //searched a group chat
+            if currentPerson.messages.count > 0 {
+                if currentPerson.messages[0].displayName != "Group chat" {
+                    currID = currentPerson.messages[0].displayName!
+                }
+                else {
+                    let gcHandles = gcIDHandlesDict[currentPerson.id]
+                    for handle in gcHandles! {
+                        let contact = contactsDict[handle]
+                        if contact == nil {
+                            currID += (handle + ", ")
+                        }
+                        else {
+                            currID += (determineContactName(contact: contact!) + ", ")
+                        }
+                    }
+                    currID.removeLast(2)
+                }
+            }
+            tableView.tableColumns[0].title = currID
+        }
+        else {
+            if currentPerson.id.contains(",") {
+                currID = String(currentPerson.id[currentPerson.id.range(of: "^[^,]*,", options: .regularExpression, range: nil, locale: nil)!])
+                currID.removeLast()
+            }
+            else {
+                currID = currentPerson.id
+            }
+            if let contact = contactsDict[currID] {
+                //tableView.headerView?.insertText(determineContactName(contact: contact))
+                tableView.tableColumns[0].title = determineContactName(contact: contact)
+            }
+            else {
+                tableView.tableColumns[0].title = currID
+                //tableView.headerView?.insertText(currID)
+            }
+        }
+        if searchAllHandles {
+            tableView.tableColumns[0].title = "All Messages"
+        }
     }
     
     override func viewDidLoad() {
