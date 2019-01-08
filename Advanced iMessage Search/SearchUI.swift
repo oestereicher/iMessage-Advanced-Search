@@ -15,7 +15,7 @@ class SearchUI: NSViewController {
     public var fullPath = ""
     private let opts = ["Contains", "Starts With", "Ends With", "Exactly", "Regex"]
     private let searchByOpts = ["Contact", "Phone Number", "Group Chat"]
-    private let limitOpts = ["Newest", "Oldest"]
+    private let limitOpts = ["Newest", "Oldest", "Starting at"]
     public var results = [MessageIDPair]()
     public var resultsTab: SearchResults?
     public var people = [Messages]()
@@ -39,11 +39,16 @@ class SearchUI: NSViewController {
     public var haveSearchedAll = false
     private var maxRes = INT64_MAX
     private var limited = false
+    private var limitedWithStart = false
     
     internal let SQLITE_STATIC = unsafeBitCast(0, to: sqlite3_destructor_type.self)
     internal let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
     
+    @IBAction func limitStartPressEnter(_ sender: Any) {
+        sayButtonClicked(self)
+    }
+    @IBOutlet weak var limitStart: NSTextField!
     @IBOutlet weak var limitOpt: NSPopUpButton!
     @IBAction func maxResultsPressEnter(_ sender: Any) {
         sayButtonClicked(self)
@@ -422,8 +427,9 @@ class SearchUI: NSViewController {
         let limitRes = limitResults.state == .on
         maxRes = INT64_MAX
         if limitRes {
-            if maxResults.stringValue.range(of: "[^0-9]", options: .regularExpression, range: nil, locale: nil) == nil {
-                maxRes = Int64(maxResults.stringValue)!
+            let maxResStr = maxResults.stringValue
+            if maxResStr.range(of: "[^0-9]", options: .regularExpression, range: nil, locale: nil) == nil && !maxResStr.isEmpty {
+                maxRes = Int64(maxResStr)!
             }
         }
         limited = results.count > maxRes
@@ -431,8 +437,27 @@ class SearchUI: NSViewController {
             if limitOpt.titleOfSelectedItem == "Newest" {
                 results = Array(results[Int(Int64(results.count) - maxRes)..<(results.count)])
             }
-            else { //the limit option must be "Oldest"
+            else if limitOpt.titleOfSelectedItem == "Oldest" {
                 results = Array(results[0..<Int(maxRes)])
+            }
+            else { //user chooses starting position
+                var start = 0
+                let limitStartStr = limitStart.stringValue
+                if limitStartStr.range(of: "[^0-9]", options: .regularExpression, range: nil, locale: nil) == nil && !limitStartStr.isEmpty {
+                    start = Int(limitStartStr)! - 1
+                    if start < 0 {
+                        start = 0
+                    }
+                }
+                limitedWithStart = start < results.count
+                if limitedWithStart {
+                    if start + Int(maxRes) < results.count {
+                        results = Array(results[start..<(start + Int(maxRes))])
+                    }
+                    else {
+                        results = Array(results[start..<results.count])
+                    }
+                }
             }
         }
         if searchAllHandles {
@@ -490,7 +515,12 @@ class SearchUI: NSViewController {
                     }
                     var limitMessage = ""
                     if maxRes != INT64_MAX && limited {
-                        limitMessage = "(limited to \(limitOpt.titleOfSelectedItem!.lowercased()) \(maxResults.stringValue))"
+                        if limitOpt.titleOfSelectedItem == "Starting at" && limitedWithStart {
+                            limitMessage = "(limited to \(maxResults.stringValue) starting at \(limitStart.stringValue))"
+                        }
+                        else {
+                            limitMessage = "(limited to \(limitOpt.titleOfSelectedItem!.lowercased()) \(maxResults.stringValue))"
+                        }
                     }
                     searchMessage.stringValue = "Search for \(searchDescription) in conversation with \(id) \(dateMessage)completed, returned \(numMatches) result\(pluralS) \(limitMessage)"
                 }
