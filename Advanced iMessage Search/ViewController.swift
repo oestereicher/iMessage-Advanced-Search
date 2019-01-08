@@ -242,10 +242,8 @@ class ViewController: NSViewController {
                 gcIDs.append(gcID)
                 gcIDDict[gcID] = numGCs
                 numGCs += 1
-                print("is there a gcID here? \(gcID)")
             }
             for gcID in gcIDs {
-                print("here we have a group chat: \(gcID)")
                 if sqlite3_prepare_v2(db, "select distinct display_name, id from (select handle.id, chat.guid, chat.room_name, chat.display_name, message.text, message.date, message.is_from_me, message.handle_id, message.ROWID as msg_row, handle.ROWID as handle_row from chat_message_join inner join chat on chat.ROWID = chat_message_join.chat_id inner join message on message.ROWID = chat_message_join.message_id and message.date = chat_message_join.message_date inner join chat_handle_join on chat.ROWID = chat_handle_join.chat_id inner join handle on handle.ROWID = chat_handle_join.handle_id where chat.chat_identifier != handle.id and chat.room_name = ? order by message.date)", -1, &statement, nil) != SQLITE_OK {
                     let errmsg = String(cString: sqlite3_errmsg(db)!)
                     print("error preparing select: \(errmsg)")
@@ -270,7 +268,6 @@ class ViewController: NSViewController {
                     }
                     if !handle.isEmpty{
                         if !handlesInGroup.contains(handle) {
-                            print("handle inserted: \(handle)")
                             handlesInGroup.insert(handle)
                             if handleGCsDict[handle] == nil {
                                 handleGCsDict[handle] = [gcID]

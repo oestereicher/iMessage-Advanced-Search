@@ -15,6 +15,7 @@ class SearchUI: NSViewController {
     public var fullPath = ""
     private let opts = ["Contains", "Starts With", "Ends With", "Exactly", "Regex"]
     private let searchByOpts = ["Contact", "Phone Number", "Group Chat"]
+    private let limitOpts = ["Newest", "Oldest"]
     public var results = [MessageIDPair]()
     public var resultsTab: SearchResults?
     public var people = [Messages]()
@@ -36,11 +37,19 @@ class SearchUI: NSViewController {
     private var searchByGC = false
     public var searchAllHandles = false
     public var haveSearchedAll = false
+    private var maxRes = INT64_MAX
+    private var limited = false
     
     internal let SQLITE_STATIC = unsafeBitCast(0, to: sqlite3_destructor_type.self)
     internal let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
     
+    @IBOutlet weak var limitOpt: NSPopUpButton!
+    @IBAction func maxResultsPressEnter(_ sender: Any) {
+        sayButtonClicked(self)
+    }
+    @IBOutlet weak var maxResults: NSTextField!
+    @IBOutlet weak var limitResults: NSButton!
     @IBOutlet weak var gcSelection: NSPopUpButton!
     @IBOutlet weak var searchAll: NSButton!
     @IBOutlet weak var searchBy: NSPopUpButtonCell!
@@ -266,7 +275,6 @@ class SearchUI: NSViewController {
                             handle = String(cString: cHandle)
                         }
                         if !handlesInGroup.contains(handle) {
-                            print("handle inserted: \(handle)")
                             handlesInGroup.insert(handle)
                             if handleGCsDict[handle] == nil {
                                 handleGCsDict[handle] = [idForSearch]
@@ -327,7 +335,7 @@ class SearchUI: NSViewController {
             }
                 //print("HEYO THIS IS THE SEARCHOPTS" + String(searchOpts.titleOfSelectedItem))
             if search.isEmpty { //can only be true if there are date parameters included
-                
+                //TODO: did i mean to do something here?
             }
             switch(searchOpts.titleOfSelectedItem) {
             case self.opts[0]:
@@ -405,11 +413,27 @@ class SearchUI: NSViewController {
             print("error closing database")
         }
         db = nil
-        self.results.sort {
+        results.sort {
             dateFormatter.dateFormat = "MM/dd/yy, h:mm:ss a"
             let date0 = dateFormatter.date(from: $0.message.date)!
             let date1 = dateFormatter.date(from: $1.message.date)!
             return date0 < date1
+        }
+        let limitRes = limitResults.state == .on
+        maxRes = INT64_MAX
+        if limitRes {
+            if maxResults.stringValue.range(of: "[^0-9]", options: .regularExpression, range: nil, locale: nil) == nil {
+                maxRes = Int64(maxResults.stringValue)!
+            }
+        }
+        limited = results.count > maxRes
+        if limited {
+            if limitOpt.titleOfSelectedItem == "Newest" {
+                results = Array(results[Int(Int64(results.count) - maxRes)..<(results.count)])
+            }
+            else { //the limit option must be "Oldest"
+                results = Array(results[0..<Int(maxRes)])
+            }
         }
         if searchAllHandles {
             haveSearchedAll = true
@@ -433,6 +457,10 @@ class SearchUI: NSViewController {
                     searchMessage.stringValue = "You must enter some search parameter"
                 }
                 else {
+                    var pluralS = ""
+                    if numMatches != 1 {
+                        pluralS = "s"
+                    }
                     var dateMessage = ""
                     if anyDate.state == .off {
                         dateFormatter.dateFormat = "MM/dd/YYYY"
@@ -460,7 +488,11 @@ class SearchUI: NSViewController {
                     if !search.isEmpty {
                         searchDescription = "\(searchOpts.title): \"\(search)\""
                     }
-                    searchMessage.stringValue = "Search for \(searchDescription) in conversation with \(id) \(dateMessage)completed, returned \(numMatches) results"
+                    var limitMessage = ""
+                    if maxRes != INT64_MAX && limited {
+                        limitMessage = "(limited to \(limitOpt.titleOfSelectedItem!.lowercased()) \(maxResults.stringValue))"
+                    }
+                    searchMessage.stringValue = "Search for \(searchDescription) in conversation with \(id) \(dateMessage)completed, returned \(numMatches) result\(pluralS) \(limitMessage)"
                 }
                 resultsTab?.results = self.results
                 resultsTab?.people = self.people
@@ -494,6 +526,8 @@ class SearchUI: NSViewController {
         searchBy.addItems(withTitles: searchByOpts)
         gcSelection.removeAllItems()
         gcSelection.addItems(withTitles: gcDisplayNames)
+        limitOpt.removeAllItems()
+        limitOpt.addItems(withTitles: limitOpts)
         resultsTab?.contactsDict = self.contactsDict
     }
     
