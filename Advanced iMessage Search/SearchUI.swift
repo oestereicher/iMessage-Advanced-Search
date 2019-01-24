@@ -14,7 +14,7 @@ class SearchUI: NSViewController {
     
     public var fullPath = ""
     private let opts = ["Contains", "Starts With", "Ends With", "Exactly", "Regex"]
-    private let searchByOpts = ["Contact", "Phone Number", "Group Chat"]
+    private let searchByOpts = ["Contact", "Phone Number", "Group Chat", "All Messages"]
     private let limitOpts = ["Newest", "Oldest", "Starting at"]
     public var results = [MessageIDPair]()
     public var resultsTab: SearchResults?
@@ -126,7 +126,6 @@ class SearchUI: NSViewController {
     }
     private func searchDB(phone: String, search: String) -> Int {
         print(handleIDs)
-        searchAllHandles = searchAll.state == .on
         //Search must include some restriction (date or text)
         if search.isEmpty && anyDate.state == .on {
             return -1
@@ -171,7 +170,7 @@ class SearchUI: NSViewController {
             var phoneNumsAndEmails = [String]()
             var thisPhone = ""
             var contactIDSet = Set<String>()
-            if searchByContact && !searchAllHandles { //search by contact
+            if searchByContact { //search by contact
                 let contact = contactsDict[contactName.titleOfSelectedItem!]
                 //TODO: was i gonna do something with this idForSearch?
                 numPossibleChatIDs += (contact?.emailAddresses.count)!
@@ -212,9 +211,9 @@ class SearchUI: NSViewController {
                 }
                 idForSearch = thisPhone
             }
-            if !haveSearchedAll || (searchByContact && !searchAllHandles) { //TODO: is there an efficient way to reuse cached data for searching by contact?
+            if !haveSearchedAll || searchByContact { //TODO: is there an efficient way to reuse cached data for searching by contact?
                 var onePersQuery = "select chat.guid, message.text, message.date, message.is_from_me, case cache_has_attachments when 0 then null when 1 then filename end as attachment from message inner join chat_message_join on message.ROWID = chat_message_join.message_id and message.date = chat_message_join.message_date inner join chat on chat.ROWID = chat_message_join.chat_id inner join chat_handle_join on chat.ROWID = chat_handle_join.chat_id inner join handle on handle.ROWID = chat_handle_join.handle_id left join message_attachment_join on message_attachment_join.message_id = message.ROWID left join attachment on attachment.ROWID = message_attachment_join.attachment_id where chat.ROWID in ( select chat.ROWID from chat_handle_join inner join chat on chat.ROWID = chat_handle_join.chat_id inner join handle on handle.ROWID = chat_handle_join.handle_id where chat.chat_identifier = handle.id and handle.id in (?"
-                if searchByContact && !searchAllHandles { //search by contact
+                if searchByContact { //search by contact
                     if numPossibleChatIDs == 0 {
                         return 0
                     }
@@ -234,7 +233,7 @@ class SearchUI: NSViewController {
                     print("error preparing select: \(errmsg)")
                 }
                 //var idForSearch = ""
-                if searchByContact && !searchAllHandles { //search by contact
+                if searchByContact { //search by contact
                     var paramNum = 1
                     for phoneOrEmail in phoneNumsAndEmails {
                         if sqlite3_bind_text(statement, Int32(paramNum), phoneOrEmail, -1, SQLITE_TRANSIENT) != SQLITE_OK {
@@ -469,11 +468,12 @@ class SearchUI: NSViewController {
     @IBAction func sayButtonClicked(_ sender: Any) {
         var id = contactID.stringValue
         let search = searchText.stringValue.lowercased()
-        searchByContact = searchBy.titleOfSelectedItem == "Contact"// && searchAll.state == .off
+        searchByContact = searchBy.titleOfSelectedItem == "Contact"
         searchByGC = searchBy.titleOfSelectedItem == "Group Chat"
+        searchAllHandles = searchBy.titleOfSelectedItem == "All Messages"
         if !self.fullPath.isEmpty {
             print(self.fullPath)
-            if !id.isEmpty || searchByContact || searchByGC {
+            if !id.isEmpty || searchByContact || searchByGC || searchAllHandles {
                 if isPhoneNumber(num: id) {
                     id = formatPhoneNumber(num: id, hasCountryCode: false)
                 }

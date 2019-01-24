@@ -242,7 +242,7 @@ extension SearchResults: NSTableViewDelegate {
             }
             cell.textField?.stringValue = cellText
             //                print("CURRENT INDEX: \(currIdx)")
-            if cellHeightsAll.count > 1 && (!searchByContact || searchAllHandles) {
+            if cellHeightsAll.count > 1 && !searchByContact {
                 cellHeightsAll[handleIDDict[currentPerson.id]!][currIdx] = heightForCell(str: cellText)
             }
             else {
@@ -381,7 +381,7 @@ extension SearchResults: NSTableViewDelegate {
                     currRow = row
                 }
                 if currRow < currentPerson.messages.count && currRow != -1 {
-                    if cellHeightsAll.count > 1 && (!searchByContact || searchAllHandles) {
+                    if cellHeightsAll.count > 1 && !searchByContact {
                         height = cellHeightsAll[handleIDDict[currentPerson.id]!][currRow]
                     }
                     else {

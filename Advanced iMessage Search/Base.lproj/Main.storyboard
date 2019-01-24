@@ -961,14 +961,6 @@
                                     <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                 </textFieldCell>
                             </textField>
-                            <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="oks-ia-Sol">
-                                <rect key="frame" x="82" y="326" width="146" height="18"/>
-                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                                <buttonCell key="cell" type="check" title="Search all messages" bezelStyle="regularSquare" imagePosition="left" inset="2" id="bpq-6Y-HJS">
-                                    <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
-                                    <font key="font" metaFont="system"/>
-                                </buttonCell>
-                            </button>
                             <popUpButton verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="d6V-g5-sby">
                                 <rect key="frame" x="94" y="180" width="176" height="25"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
@@ -1071,7 +1063,6 @@
                         <outlet property="limitResults" destination="DOl-tz-oyI" id="tfv-u2-AE9"/>
                         <outlet property="limitStart" destination="OCe-1J-UJ3" id="Qk5-uK-5yU"/>
                         <outlet property="maxResults" destination="CWG-Fp-RkZ" id="1hS-kF-j6M"/>
-                        <outlet property="searchAll" destination="oks-ia-Sol" id="oAC-SM-79v"/>
                         <outlet property="searchBy" destination="thM-j1-I5a" id="lwc-F9-9gs"/>
                         <outlet property="searchDate" destination="aob-Nx-Mq2" id="Stf-ZP-zCX"/>
                         <outlet property="searchMessage" destination="cmJ-jN-cB8" id="qR8-dC-zuo"/>
