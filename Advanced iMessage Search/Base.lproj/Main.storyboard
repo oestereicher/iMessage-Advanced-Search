@@ -734,7 +734,7 @@
                                 <autoresizingMask key="autoresizingMask"/>
                                 <textFieldCell key="cell" id="MCz-Bf-U6l">
                                     <font key="font" metaFont="system"/>
-                                    <string key="title">First, you need to open Finder and copy ~/Library/Messages/chat.db to another folder (like your Desktop). When you have done this, enter the full path name below (or select the folder) and press the button.</string>
+                                    <string key="title">First, you need to open Finder and copy ~/Library/Messages/chat.db to another folder (like your Desktop). When you have done this, enter the full path name below (or select the folder) and press submit.</string>
                                     <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
                                     <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                 </textFieldCell>
@@ -778,6 +778,17 @@
                                 </buttonCell>
                                 <connections>
                                     <action selector="browseFile:" target="XfG-lQ-9wD" id="Tf1-gA-gVF"/>
+                                </connections>
+                            </button>
+                            <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="gXh-Wd-Cfs">
+                                <rect key="frame" x="184" y="144" width="115" height="32"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <buttonCell key="cell" type="push" title="Open Finder" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="tMO-84-Fnf">
+                                    <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                                    <font key="font" metaFont="system"/>
+                                </buttonCell>
+                                <connections>
+                                    <action selector="openFinder:" target="XfG-lQ-9wD" id="J4i-1E-xqa"/>
                                 </connections>
                             </button>
                         </subviews>

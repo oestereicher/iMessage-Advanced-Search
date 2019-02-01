@@ -55,6 +55,10 @@ class ViewController: NSViewController {
         }
         return formattedNum
     }
+    
+    @IBAction func openFinder(_ sender: Any) {
+        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: FileManager.default.homeDirectoryForCurrentUser.path + "/Library/Messages")
+    }
     @IBAction func browseFile(_ sender: Any) {
         let panel = NSOpenPanel()
         panel.title = "Select the directory containing a copy of chat.db"
