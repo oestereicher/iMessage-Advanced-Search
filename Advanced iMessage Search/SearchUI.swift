@@ -16,6 +16,7 @@ class SearchUI: NSViewController {
     private let opts = ["Contains", "Starts With", "Ends With", "Exactly", "Regex"]
     private let searchByOpts = ["Contact", "Phone Number", "Group Chat", "All Messages"]
     private let limitOpts = ["Newest", "Oldest", "Starting at"]
+    private let filterFromOpts = ["Entire convo", "Sent", "Received"]
     public var results = [MessageIDPair]()
     public var resultsTab: SearchResults?
     public var people = [Messages]()
@@ -45,6 +46,7 @@ class SearchUI: NSViewController {
     internal let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
     
+    @IBOutlet weak var filterFrom: NSPopUpButton!
     @IBAction func limitStartPressEnter(_ sender: Any) {
         sayButtonClicked(self)
     }
@@ -341,74 +343,46 @@ class SearchUI: NSViewController {
             if search.isEmpty { //can only be true if there are date parameters included
                 //TODO: did i mean to do something here?
             }
-            switch(searchOpts.titleOfSelectedItem) {
-            case self.opts[0]:
-                for message in currentPerson {
-                    if search.isEmpty { //if search is empty, this means that there must be a date parameter and we only want to return the first result in that date range
-                        if appendToResultsIf(cond: true, message: message, idForSearch: idForSearch) {
-                            resultsIdx += 1
-                            break
-                        }
-                    }
-                    else if appendToResultsIf(cond: message.text.lowercased().range(of: search) != nil, message: message, idForSearch: idForSearch) {
+            //checking for filtering messages as sent or received
+            var filterSent = false
+            var entireConvo = true
+            if filterFrom.titleOfSelectedItem != filterFromOpts[0] {
+                entireConvo = false
+                if filterFrom.titleOfSelectedItem == filterFromOpts[1] { //sent was selected
+                    filterSent = true
+                }
+            }
+            var selectedSearchOpt = ""
+            for message in currentPerson {
+                if selectedSearchOpt == "" {
+                    selectedSearchOpt = searchOpts.titleOfSelectedItem!
+                }
+                let appendEmptySearch = entireConvo || filterSent == message.is_from_me
+                var appendCond = false
+                switch(selectedSearchOpt) {
+                case self.opts[0]:
+                    appendCond = appendEmptySearch && message.text.lowercased().range(of: search) != nil
+                    break
+                case self.opts[1]:
+                    appendCond = appendEmptySearch && message.text.lowercased().hasPrefix(search)
+                case self.opts[2]:
+                    appendCond = appendEmptySearch && message.text.lowercased().hasSuffix(search)
+                case self.opts[3]:
+                    appendCond = appendEmptySearch && message.text.lowercased() == search
+                case self.opts[4]:
+                    appendCond = appendEmptySearch && message.text.lowercased().range(of: search, options: .regularExpression, range: nil, locale: nil) != nil
+                default:
+                    break
+                }
+                if search.isEmpty { //if search is empty, this means that there must be a date parameter and we only want to return the first result in that date range
+                    if appendToResultsIf(cond: appendEmptySearch, message: message, idForSearch: idForSearch) {
                         resultsIdx += 1
+                        break
                     }
                 }
-                break
-            case self.opts[1]:
-                for message in currentPerson {
-                    if search.isEmpty {
-                        if appendToResultsIf(cond: true, message: message, idForSearch: idForSearch) {
-                            resultsIdx += 1
-                            break
-                        }
-                    }
-                    else if appendToResultsIf(cond: message.text.lowercased().hasPrefix(search), message: message, idForSearch: idForSearch) {
-                        resultsIdx += 1
-                    }
+                else if appendToResultsIf(cond: appendCond, message: message, idForSearch: idForSearch) {
+                    resultsIdx += 1
                 }
-                break
-            case self.opts[2]:
-                for message in currentPerson {
-                    if search.isEmpty {
-                        if appendToResultsIf(cond: true, message: message, idForSearch: idForSearch) {
-                            resultsIdx += 1
-                            break
-                        }
-                    }
-                    else if appendToResultsIf(cond: message.text.lowercased().hasSuffix(search), message: message, idForSearch: idForSearch) {
-                        resultsIdx += 1
-                    }
-                }
-                break
-            case self.opts[3]:
-                for message in currentPerson {
-                    if search.isEmpty {
-                        if appendToResultsIf(cond: true, message: message, idForSearch: idForSearch) {
-                            resultsIdx += 1
-                            break
-                        }
-                    }
-                    else if appendToResultsIf(cond: message.text.lowercased() == search, message: message, idForSearch: idForSearch) {
-                        resultsIdx += 1
-                    }
-                }
-                break
-            case self.opts[4]:
-                for message in currentPerson {
-                    if search.isEmpty {
-                        if appendToResultsIf(cond: true, message: message, idForSearch: idForSearch) {
-                            resultsIdx += 1
-                            break
-                        }
-                    }
-                    else if appendToResultsIf(cond: message.text.lowercased().range(of: search, options: .regularExpression, range: nil, locale: nil) != nil, message: message, idForSearch: idForSearch) {
-                        resultsIdx += 1
-                    }
-                }
-                break
-            default:
-                break
             }
         } //bracket ending the big for loop
         print("everything up to here worked")
@@ -558,6 +532,8 @@ class SearchUI: NSViewController {
         gcSelection.addItems(withTitles: gcDisplayNames)
         limitOpt.removeAllItems()
         limitOpt.addItems(withTitles: limitOpts)
+        filterFrom.removeAllItems()
+        filterFrom.addItems(withTitles: filterFromOpts)
         resultsTab?.contactsDict = self.contactsDict
     }
     

@@ -889,8 +889,8 @@
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                 <datePickerCell key="cell" borderStyle="bezel" alignment="left" id="jOP-Uf-jdJ">
                                     <font key="font" metaFont="system"/>
-                                    <date key="date" timeIntervalSinceReferenceDate="-61066800">
-                                        <!--1999-01-25 05:00:00 +0000-->
+                                    <date key="date" timeIntervalSinceReferenceDate="-60980400">
+                                        <!--1999-01-26 05:00:00 +0000-->
                                     </date>
                                     <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -1061,6 +1061,30 @@
                                     </connections>
                                 </textFieldCell>
                             </textField>
+                            <popUpButton verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="giD-5X-3NU">
+                                <rect key="frame" x="373" y="182" width="106" height="25"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <popUpButtonCell key="cell" type="push" title="Item 1" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" selectedItem="kXH-NC-aOR" id="ifg-UT-4XL">
+                                    <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
+                                    <font key="font" metaFont="menu"/>
+                                    <menu key="menu" id="Ggg-TE-C1V">
+                                        <items>
+                                            <menuItem title="Item 1" state="on" id="kXH-NC-aOR"/>
+                                            <menuItem title="Item 2" id="dDY-zT-IOV"/>
+                                            <menuItem title="Item 3" id="Vm4-Bp-9BE"/>
+                                        </items>
+                                    </menu>
+                                </popUpButtonCell>
+                            </popUpButton>
+                            <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="STw-gw-Nz7">
+                                <rect key="frame" x="296" y="187" width="65" height="17"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <textFieldCell key="cell" lineBreakMode="clipping" title="Messages" id="Yjk-ja-krT">
+                                    <font key="font" metaFont="system"/>
+                                    <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
+                                    <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                                </textFieldCell>
+                            </textField>
                         </subviews>
                     </view>
                     <connections>
@@ -1068,6 +1092,7 @@
                         <outlet property="contactID" destination="mlU-aM-hJa" id="CYj-mc-hBg"/>
                         <outlet property="contactName" destination="bKS-ka-235" id="nUw-IW-Yig"/>
                         <outlet property="countries" destination="ETu-li-vLH" id="Ut6-dG-3Yn"/>
+                        <outlet property="filterFrom" destination="giD-5X-3NU" id="Q9o-rh-dkd"/>
                         <outlet property="fromDate" destination="Kus-4R-l6O" id="zfp-Lh-n6S"/>
                         <outlet property="gcSelection" destination="d6V-g5-sby" id="wdK-xp-19A"/>
                         <outlet property="limitOpt" destination="x2v-04-Vh9" id="Vto-da-zgK"/>
